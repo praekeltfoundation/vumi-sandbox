@@ -3,7 +3,7 @@
 __version__ = "0.0.1"
 
 __all__ = [
-    "JsSandbox", "JsFileSandbox", "SandboxError", "SandboxResource",
+    "Sandbox", "JsSandbox", "JsFileSandbox", "SandboxError", "SandboxResource",
     "LoggingResource", "HttpClientResource", "OutboundResource",
     "RedisResource",
 ]
