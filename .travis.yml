@@ -11,7 +11,7 @@ before_install:
   - sudo apt-get -qq update
   - sudo apt-get install -qq protobuf-compiler
 install:
-  - "pip install -r requirements.pip --use-wheel"
+  - "pip install -r requirements.txt --use-wheel"
   - "pip install coveralls --use-wheel"
   - "python setup.py install"
 script:
