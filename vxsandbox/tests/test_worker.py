@@ -11,8 +11,7 @@ from datetime import datetime
 from twisted.internet.defer import inlineCallbacks, DeferredQueue
 from twisted.internet.error import ProcessTerminated
 
-from vumi.application.tests.helpers import (
-    ApplicationHelper, find_nodejs_or_skip_test)
+from vumi.application.tests.helpers import ApplicationHelper
 from vumi.tests.utils import LogCatcher
 from vumi.tests.helpers import VumiTestCase
 
@@ -22,6 +21,7 @@ from vxsandbox.worker import (
 from vxsandbox import SandboxResource, LoggingResource
 from vxsandbox.tests.utils import DummyAppWorker
 from vxsandbox.resources.tests.utils import ResourceTestCaseBase
+from vxsandbox.utils import find_nodejs_or_skip_test
 
 
 class MockResource(SandboxResource):
