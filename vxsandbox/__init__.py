@@ -8,7 +8,7 @@ __all__ = [
     "RedisResource",
 ]
 
-from .worker import JsSandbox, JsFileSandbox
+from .worker import Sandbox, JsSandbox, JsFileSandbox
 from .utils import SandboxError
 from .resources import (
     SandboxResource, LoggingResource, HttpClientResource,
