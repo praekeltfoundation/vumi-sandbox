@@ -1,0 +1,20 @@
+language: python
+python:
+  - "2.6"
+  - "2.7"
+node_js:
+  - "0.10"
+services:
+  - redis-server
+before_install:
+  # We need the protobuf-compiler so we can install Riak client libraries.
+  - sudo apt-get -qq update
+  - sudo apt-get install -qq protobuf-compiler
+install:
+  - "pip install -r requirements.pip --use-wheel"
+  - "pip install coveralls --use-wheel"
+  - "python setup.py install"
+script:
+  - VUMITEST_REDIS_DB=1 VUMI_TEST_NODE_PATH="$(which node)" coverage run --source=vxsandbox `which trial` vxsandbox
+after_success:
+  - coveralls
