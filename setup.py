@@ -13,7 +13,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'Twisted>=13.1.0',
-        'vumi',
+        'vumi>=0.5',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
