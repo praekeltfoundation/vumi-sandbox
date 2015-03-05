@@ -3,12 +3,12 @@
 __version__ = "0.0.1"
 
 __all__ = [
-    "JsSandbox", "JsFileSandbox", "SandboxError", "SandboxResource",
+    "Sandbox", "JsSandbox", "JsFileSandbox", "SandboxError", "SandboxResource",
     "LoggingResource", "HttpClientResource", "OutboundResource",
     "RedisResource",
 ]
 
-from .worker import JsSandbox, JsFileSandbox
+from .worker import Sandbox, JsSandbox, JsFileSandbox
 from .utils import SandboxError
 from .resources import (
     SandboxResource, LoggingResource, HttpClientResource,

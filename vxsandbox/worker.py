@@ -248,14 +248,17 @@ class Sandbox(ApplicationWorker):
     def sandbox_id_for_message(self, msg_or_event):
         """Return a sandbox id for a message or event.
 
-        Sub-classes may override this to retrieve an appropriate id.
+        This implementation simply returns ``msg_or_event['sandbox_id']``.
+        Sub-classes may override this to retrieve a more appropriate id.
         """
         return msg_or_event['sandbox_id']
 
     def sandbox_protocol_for_message(self, msg_or_event, config):
         """Return a sandbox protocol for a message or event.
 
-        Sub-classes may override this to retrieve an appropriate protocol.
+        This implementation ignores ``msg_or_event`` and returns a sandbox
+        protocol based on the given ``config``. Sub-classes may override this
+        to retrieve a custom protocol if needed.
         """
         api = self.create_sandbox_api(self.resources, config)
         protocol = self.create_sandbox_protocol(api)
@@ -393,16 +396,18 @@ class JsSandbox(Sandbox):
     def javascript_for_api(self, api):
         """Called by JsSandboxResource.
 
-        :returns: String containing Javascript for the app to run.
+        :returns:
+            String containing Javascript for the app to run.
         """
         return api.config.javascript
 
     def app_context_for_api(self, api):
         """Called by JsSandboxResource
 
-        :returns: String containing Javascript expression that returns
-        addition context for the namespace the app is being run
-        in. This Javascript is expected to be trusted code.
+        :returns:
+            String containing Javascript expression that returns
+            addition context for the namespace the app is being run
+            in. This Javascript is expected to be trusted code.
         """
         return api.config.app_context
 
