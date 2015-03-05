@@ -68,11 +68,11 @@ class TestFindNodejsOrSkipTest(VumiTestCase):
         self.patch_vumi_test_node_path("/tmp/nodejs.env.dummy")
         self.patch_os_path_isfile("/tmp/nodejs.env.dummy", False)
         with self.fail_on_skip_test():
-            self.assertRaisesRegexp(
-                RuntimeError,
-                "^VUMI_TEST_NODE_PATH specified, but does not exist:"
-                " /tmp/nodejs.env.dummy$",
-                find_nodejs_or_skip_test, WorkerWithoutNodejs)
+            err = self.failUnlessRaises(
+                RuntimeError, find_nodejs_or_skip_test, WorkerWithoutNodejs)
+            self.assertEqual(str(err), (
+                "VUMI_TEST_NODE_PATH specified, but does not exist:"
+                " /tmp/nodejs.env.dummy"))
 
     def test_worker_finds_nodejs(self):
         self.patch_vumi_test_node_path(None)
@@ -83,7 +83,6 @@ class TestFindNodejsOrSkipTest(VumiTestCase):
 
     def test_worker_doesnt_find_nodejs(self):
         self.patch_vumi_test_node_path(None)
-        self.assertRaisesRegexp(
-            SkipTest,
-            "^No node.js executable found.$",
-            find_nodejs_or_skip_test, WorkerWithoutNodejs)
+        err = self.failUnlessRaises(
+            SkipTest, find_nodejs_or_skip_test, WorkerWithoutNodejs)
+        self.assertEqual(str(err), "No node.js executable found.")
