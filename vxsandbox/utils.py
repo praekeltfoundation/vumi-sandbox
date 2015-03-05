@@ -6,7 +6,7 @@ from twisted.trial.unittest import SkipTest
 
 
 class SandboxError(Exception):
-    """Raise when an error occurs inside the sandbox."""
+    """Raised when an error occurs inside the sandbox."""
 
 
 def find_nodejs_or_skip_test(worker_class):
