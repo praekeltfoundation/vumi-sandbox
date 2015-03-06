@@ -1,6 +1,9 @@
 """Tests for vxsandbox.resources.utils."""
 
 import json
+import logging
+
+from twisted.internet.defer import Deferred
 
 from vumi.tests.helpers import VumiTestCase
 from vumi.message import MissingMessageField
@@ -20,6 +23,19 @@ class RecordingResource(SandboxResource):
 
     def teardown(self):
         self.teardown_calls += 1
+
+
+class RecordingApi(object):
+    def __init__(self, sandbox_id='sandbox_uno'):
+        self.sandbox_id = sandbox_id
+        self.logs = []
+        self.deaths = 0
+
+    def log(self, msg, lvl):
+        self.logs.append((msg, lvl))
+
+    def sandbox_kill(self):
+        self.deaths += 1
 
 
 class TestSandboxCommand(VumiTestCase):
@@ -75,8 +91,9 @@ class TestSandboxResources(VumiTestCase):
     def class_name(self, cls):
         return '.'.join([cls.__module__, cls.__name__])
 
-    def assert_recording_resource(
-            self, resources, name, config={}, setup_calls=0, teardown_calls=0):
+    def assert_recording_resource(self, resources, name, config=None,
+                                  setup_calls=0, teardown_calls=0):
+        config = config or {}
         resource = resources.resources[name]
         self.assertTrue(isinstance(resource, RecordingResource))
         self.assertEqual(resource.name, name)
@@ -157,5 +174,115 @@ class TestSandboxResources(VumiTestCase):
         })
 
 
+class CommandHandler(object):
+    def __init__(self, name, test_case, result=None):
+        self._name = name
+        self._test_case = test_case
+        self._calls = []
+        self._result = result or object()
+
+    def assert_called(self, api, cmd, result_d):
+        self._test_case.assertEqual(self._calls, [(api, cmd)])
+        if isinstance(self._result, Deferred):
+            self._test_case.assertEqual(result_d, self._result)
+        else:
+            self._test_case.assertTrue(result_d.called)
+            self._test_case.assertEqual(result_d.result, self._result)
+
+    def __call__(self, api, cmd):
+        self._calls.append((api, cmd))
+        return self._result
+
+
 class TestSandboxResource(VumiTestCase):
-    pass
+    def mk_resource(self, name, app_worker=None, config=None, handler=None):
+        app_worker = app_worker or object()
+        config = config or {}
+        resource = SandboxResource(name, app_worker, config)
+        if handler is not None:
+            setattr(resource, handler._name, handler)
+        return resource
+
+    def assert_recording_api(self, api, logs=None, deaths=0):
+        logs = logs or []
+        self.assertEqual(api.logs, logs)
+        self.assertEqual(api.deaths, deaths)
+
+    def test_create(self):
+        dummy_worker = object()
+        resource = SandboxResource(
+            'noir', dummy_worker, {'colour': 'black'})
+        self.assertEqual(resource.name, 'noir')
+        self.assertEqual(resource.app_worker, dummy_worker)
+        self.assertEqual(resource.config, {'colour': 'black'})
+
+    def test_setup(self):
+        resource = self.mk_resource('test')
+        resource.setup()
+
+    def test_teardown(self):
+        resource = self.mk_resource('test')
+        resource.teardown()
+
+    def test_sandbox_init(self):
+        api = RecordingApi()
+        resource = self.mk_resource('test')
+        resource.sandbox_init(api)
+        self.assert_recording_api(api, logs=[])
+
+    def test_reply(self):
+        resource = self.mk_resource('test')
+        cmd = SandboxCommand(cmd='dothing', cmd_id='123')
+        reply = resource.reply(cmd, thing='done')
+        self.assertEqual(reply, SandboxCommand(
+            cmd='dothing', cmd_id='123', reply=True, thing='done',
+        ))
+
+    def test_reply_error(self):
+        resource = self.mk_resource('test')
+        cmd = SandboxCommand(cmd='dothing', cmd_id='123')
+        error = resource.reply_error(cmd, 'failed-to-do-thing')
+        self.assertEqual(error, SandboxCommand(
+            cmd='dothing', cmd_id='123', reply=True,
+            success=False, reason='failed-to-do-thing',
+        ))
+
+    def test_dispatch_known_request(self):
+        handler = CommandHandler('handle_dothing', self)
+        resource = self.mk_resource('test', handler=handler)
+        api = RecordingApi()
+        cmd = SandboxCommand(cmd='dothing', arg=1)
+        d = resource.dispatch_request(api, cmd)
+        handler.assert_called(api, cmd, d)
+
+    def test_dispatch_unknown_request(self):
+        handler = CommandHandler('unknown_request', self)
+        resource = self.mk_resource('test', handler=handler)
+        api = RecordingApi()
+        cmd = SandboxCommand(cmd='do_unknown_thing', arg=1)
+        d = resource.dispatch_request(api, cmd)
+        handler.assert_called(api, cmd, d)
+
+    def test_dispatch_deferred_request(self):
+        handler = CommandHandler(
+            'handle_deferred', self, result=Deferred())
+        resource = self.mk_resource('test', handler=handler)
+        api = RecordingApi()
+        cmd = SandboxCommand(cmd='deferred', arg=1)
+        d = resource.dispatch_request(api, cmd)
+        handler.assert_called(api, cmd, d)
+
+    def test_unknown_request(self):
+        api = RecordingApi()
+        cmd = SandboxCommand(cmd='dothing', arg=1)
+
+        resource = self.mk_resource('test')
+        result = resource.unknown_request(api, cmd)
+
+        self.assertEqual(result, None)
+        [[msg, lvl]] = api.logs
+        self.assertTrue(msg.startswith(
+            "Resource test received unknown command 'dothing' from sandbox"
+            " 'sandbox_uno'. Killing sandbox. [Full command:"
+            " <Message payload="))
+        self.assertEqual(lvl, logging.ERROR)
