@@ -386,6 +386,11 @@ class TestSandbox(SandboxTestCaseBase):
 
 class JsSandboxTestMixin(object):
 
+    BIGGER_RLIMITS = {
+        "RLIMIT_STACK": [2 * 1024 * 1024] * 2,
+        "RLIMIT_AS": [256 * 1024 * 1024] * 2,
+    }
+
     @inlineCallbacks
     def test_js_sandboxer(self):
         app_js = pkg_resources.resource_filename(
@@ -469,6 +474,7 @@ class TestJsSandbox(SandboxTestCaseBase, JsSandboxTestMixin):
 
     def setup_app(self, javascript_code, extra_config=None):
         extra_config = extra_config or {}
+        extra_config.setdefault('rlimits', self.BIGGER_RLIMITS)
         extra_config.update({
             'javascript': javascript_code,
             'executable': self._node_path,
@@ -492,6 +498,7 @@ class TestJsFileSandbox(SandboxTestCaseBase, JsSandboxTestMixin):
         tmp_file.close()
 
         extra_config = extra_config or {}
+        extra_config.setdefault('rlimits', self.BIGGER_RLIMITS)
         extra_config.update({
             'javascript_file': tmp_file_name,
             'executable': self._node_path,
