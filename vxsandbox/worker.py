@@ -437,3 +437,13 @@ class JsFileSandbox(JsSandbox):
 
     def javascript_for_api(self, api):
         return file(api.config.javascript_file).read()
+
+
+class StandaloneJsFileSandbox(JsFileSandbox):
+
+    def sandbox_id_for_message(self, msg_or_event):
+        """Return a sandbox id for a message or event.
+
+        This implementation simply returns the sandbox_id from the app config.
+        """
+        return self.config['sandbox_id']
