@@ -17,7 +17,7 @@ from vumi.tests.helpers import VumiTestCase
 
 from vxsandbox.worker import (
     Sandbox, SandboxApi, SandboxCommand, SandboxResources,
-    JsSandboxResource, JsSandbox, JsFileSandbox)
+    JsSandboxResource, JsSandbox, JsFileSandbox, StandaloneJsFileSandbox)
 from vxsandbox import SandboxResource, LoggingResource
 from vxsandbox.tests.utils import DummyAppWorker
 from vxsandbox.resources.tests.utils import ResourceTestCaseBase
@@ -506,6 +506,41 @@ class TestJsFileSandbox(SandboxTestCaseBase, JsSandboxTestMixin):
 
         return super(TestJsFileSandbox, self).setup_app(
             extra_config=extra_config)
+
+
+class TestStandaloneJsFileSandbox(SandboxTestCaseBase, JsSandboxTestMixin):
+
+    application_class = StandaloneJsFileSandbox
+
+    def setUp(self):
+        self._node_path = find_nodejs_or_skip_test(self.application_class)
+        super(TestStandaloneJsFileSandbox, self).setUp()
+
+    def setup_app(self, javascript, extra_config=None):
+        tmp_file_name = self.mktemp()
+        tmp_file = open(tmp_file_name, 'w')
+        tmp_file.write(javascript)
+        tmp_file.close()
+
+        extra_config = extra_config or {}
+        extra_config.setdefault('rlimits', self.BIGGER_RLIMITS)
+        extra_config.update({
+            'javascript_file': tmp_file_name,
+            'executable': self._node_path,
+            'sandbox_id': 'config_sandbox_id',
+        })
+
+        return super(TestStandaloneJsFileSandbox, self).setup_app(
+            extra_config=extra_config)
+
+    @inlineCallbacks
+    def test_sandbox_id_set_correctly(self):
+        app_js = pkg_resources.resource_filename(
+            'vxsandbox.tests', 'app.js')
+        javascript = file(app_js).read()
+        app = yield self.setup_app(javascript)
+
+        self.assertEqual(app.config['sandbox_id'], 'config_sandbox_id')
 
 
 class TestSandboxApi(VumiTestCase):
