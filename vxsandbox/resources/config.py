@@ -2,8 +2,6 @@
 
 """A file-based configuration resource for Vumi's application sandbox."""
 
-from twisted.internet.defer import inlineCallbacks
-
 from .utils import SandboxResource
 
 
