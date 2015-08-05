@@ -33,9 +33,13 @@ class TestFileConfigResource(ResourceTestCaseBase):
         self.create_resource(config='foobar')
         reply = yield self.dispatch_command('get', key='config')
         self.check_reply(reply, success=False)
+        self.assertTrue('foobar' in reply['reason'])
+        self.assertTrue('Cannot read file' in reply['reason'])
 
     @inlineCallbacks
     def test_get_config_non_existing_key(self):
         self.create_resource()
         reply = yield self.dispatch_command('get', key='bar')
         self.check_reply(reply, success=False)
+        self.assertTrue('bar' in reply['reason'])
+        self.assertTrue('not found' in reply['reason'])

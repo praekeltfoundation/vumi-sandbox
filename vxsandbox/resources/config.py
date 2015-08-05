@@ -29,10 +29,13 @@ class FileConfigResource(SandboxResource):
         key = command.get('key')
         filename = self.config.get('keys').get(key)
         if filename is None:
-            return self.reply(command, success=False)
+            return self.reply_error(
+                command, reason='Configuration key %r not found' % (key,))
         try:
             with open(filename, 'r') as f:
                 value = f.read()
             return self.reply(command, value=value, success=True)
         except EnvironmentError:
-            return self.reply(command, success=False)
+            return self.reply_error(
+                command,
+                reason='Cannot read file %r' % (filename,))
