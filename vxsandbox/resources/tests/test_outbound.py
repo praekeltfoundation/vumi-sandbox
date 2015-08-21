@@ -21,8 +21,11 @@ class TestOutboundResource(ResourceTestCaseBase):
                                             continue_session=True,
                                             in_reply_to='msg1')
         self.check_reply(reply, success=True)
-        self.assertEqual(self.app_worker.mock_calls['reply_to'],
-                         [(('msg1', 'hello'), {'continue_session': True})])
+        self.assertEqual(self.app_worker.mock_calls['reply_to'], [
+            (('msg1', 'hello'), {
+                'continue_session': True, 'helper_metadata': {}
+            }),
+        ])
 
     @inlineCallbacks
     def test_handle_reply_to_group(self):
@@ -32,8 +35,11 @@ class TestOutboundResource(ResourceTestCaseBase):
                                             continue_session=True,
                                             in_reply_to='msg1')
         self.check_reply(reply, success=True)
-        self.assertEqual(self.app_worker.mock_calls['reply_to_group'],
-                         [(('msg1', 'hello'), {'continue_session': True})])
+        self.assertEqual(self.app_worker.mock_calls['reply_to_group'], [
+            (('msg1', 'hello'), {
+                'continue_session': True, 'helper_metadata': {},
+            }),
+        ])
 
     @inlineCallbacks
     def test_handle_send_to(self):
@@ -42,5 +48,8 @@ class TestOutboundResource(ResourceTestCaseBase):
                                             to_addr='1234',
                                             tag='default')
         self.check_reply(reply, success=True)
-        self.assertEqual(self.app_worker.mock_calls['send_to'],
-                         [(('1234', 'hello'), {'endpoint': 'default'})])
+        self.assertEqual(self.app_worker.mock_calls['send_to'], [
+            (('1234', 'hello'), {
+                'endpoint': 'default', 'helper_metadata': {},
+            }),
+        ])
