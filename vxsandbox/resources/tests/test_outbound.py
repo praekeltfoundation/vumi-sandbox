@@ -164,15 +164,75 @@ class TestOutboundResource(ResourceTestCaseBase):
     @inlineCallbacks
     def test_send_to(self):
         self.app_worker.mock_returns['send_to'] = succeed(None)
-        reply = yield self.dispatch_command('send_to', content='hello',
-                                            to_addr='1234',
-                                            tag='default')
+        reply = yield self.dispatch_command(
+            'send_to', content='hello', to_addr='1234')
         self.check_reply(reply, success=True)
         self.assertEqual(self.app_worker.mock_calls['send_to'], [
             (('1234', 'hello'), {
                 'endpoint': 'default', 'helper_metadata': {},
             }),
         ])
+
+    @inlineCallbacks
+    def test_send_to_with_endpoint(self):
+        self.app_worker.add_endpoint('extra_endpoint')
+        self.app_worker.mock_returns['send_to'] = succeed(None)
+        reply = yield self.dispatch_command(
+            'send_to', content='hello', to_addr='1234',
+            endpoint='extra_endpoint')
+        self.check_reply(reply, success=True)
+        self.assertEqual(self.app_worker.mock_calls['send_to'], [
+            (('1234', 'hello'), {
+                'endpoint': 'extra_endpoint', 'helper_metadata': {},
+            }),
+        ])
+
+    def assert_send_to_fails(self, reason, **kw):
+        return self.assert_cmd_fails(reason, 'send_to', **kw)
+
+    def test_send_to_unconfigured_endpoint(self):
+        return self.assert_send_to_fails(
+            "Endpoint u'bad_endpoint' not configured",
+            endpoint='bad_endpoint', to_addr='6789',
+            content='bar')
+
+    def test_send_to_missing_content(self):
+        return self.assert_send_to_fails(
+            "'content' must be given.",
+            endpoint='extra_endpoint', to_addr='6789')
+
+    def test_send_to_bad_content(self):
+        return self.assert_send_to_fails(
+            "'content' must be unicode or null.",
+            content=3, endpoint='extra_endpoint', to_addr='6789')
+
+    def test_send_to_bad_endpoint(self):
+        return self.assert_send_to_fails(
+            "'endpoint' must be given in sends.",
+            endpoint=None, to_addr='6789', content='bar')
+
+    def test_send_to_missing_to_addr(self):
+        return self.assert_send_to_fails(
+            "'to_addr' must be given in sends.",
+            endpoint='extra_endpoint', content='bar')
+
+    def test_send_to_bad_to_addr(self):
+        return self.assert_send_to_fails(
+            "'to_addr' must be given in sends.",
+            to_addr=None, endpoint='extra_endpoint', content='bar')
+
+    def test_send_to_helper_metadata_not_allowed(self):
+        return self.assert_send_to_fails(
+            "'helper_metadata' is not allowed",
+            to_addr='6789', endpoint='default', content='bar',
+            helper_metadata={'foo': 'not-allowed'})
+
+    def test_send_to_helper_metadata_invalid(self):
+        return self.assert_send_to_fails(
+            "'helper_metadata' may only contain the following keys: voice",
+            resource_config={'allowed_helper_metadata': ['voice']},
+            to_addr='6789', endpoint='default', content='bar',
+            helper_metadata={'foo': 'not-allowed'})
 
     @inlineCallbacks
     def test_send_to_endpoint(self):
