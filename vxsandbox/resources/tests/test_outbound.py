@@ -54,9 +54,9 @@ class TestOutboundResource(ResourceTestCaseBase):
         yield self.create_resource(resource_config or {})
         reply = yield self.dispatch_command(cmd, **cmd_args)
         self.check_reply(reply, success=False, reason=reason)
-        self.assertFalse(self.app_worker.mock_calls['send_to'], [])
-        self.assertFalse(self.app_worker.mock_calls['reply_to'], [])
-        self.assertFalse(self.app_worker.mock_calls['reply_to_group'], [])
+        self.assertEqual(self.app_worker.mock_calls['send_to'], [])
+        self.assertEqual(self.app_worker.mock_calls['reply_to'], [])
+        self.assertEqual(self.app_worker.mock_calls['reply_to_group'], [])
 
     def assert_sent(self, to_addr, content, msg_options):
         self.assertEqual(self.app_worker.mock_calls['send_to'], [
