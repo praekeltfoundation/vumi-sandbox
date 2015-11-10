@@ -29,6 +29,12 @@ class SandboxRlimiter(object):
         resource.RLIMIT_AS: "v",
     }
 
+    # These ones can't always be set, so ignore them.
+    ULIMIT_SKIP = (
+        resource.RLIMIT_STACK,
+        resource.RLIMIT_MEMLOCK,
+    )
+
     def __init__(self, rlimits, args, **kwargs):
         self._args = args
         self._rlimits = rlimits
@@ -39,7 +45,7 @@ class SandboxRlimiter(object):
             protocol, '/bin/bash', args=self.build_args(), **self._kwargs)
 
     def build_args(self):
-        return ['-e', '-c', self.build_script(), '--'] + self._args
+        return ['bash', '-e', '-c', self.build_script(), '--'] + self._args
 
     def build_script(self):
         script_lines = ["#!/bin/bash", ""]
@@ -50,7 +56,7 @@ class SandboxRlimiter(object):
     def _build_rlimit_commands(self):
         yield "# Set resource limits."
         for rlimit, (soft, hard) in sorted(self._rlimits.items()):
-            if rlimit == resource.RLIMIT_STACK:
+            if rlimit in self.ULIMIT_SKIP:
                 # We can't set this one.
                 continue
             param = self.ULIMIT_PARAMS[rlimit]

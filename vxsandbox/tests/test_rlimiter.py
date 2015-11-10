@@ -86,5 +86,5 @@ class TestSandboxRlimiter(VumiTestCase):
         }, ['/bin/echo', 'hello', 'world'])
         script = rlimiter.build_script()
         self.assertEqual(rlimiter.build_args(), [
-            '-e', '-c', script, '--',
+            'bash', '-e', '-c', script, '--',
             '/bin/echo', 'hello', 'world'])
