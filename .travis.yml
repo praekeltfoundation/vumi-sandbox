@@ -22,6 +22,7 @@ services:
 before_install:
   # If necessary, set up an appropriate version of pypy.
   - if [ ! -z "$PYPY_VERSION" ]; then source utils/setup-pypy-travis.sh; fi
+  - if [ ! -z "$PYPY_VERSION" ]; then python --version 2>&1 | fgrep "PyPy $PYPY_VERSION"; fi
 install:
   - "pip install -r requirements.txt"
   - "pip install coveralls"
