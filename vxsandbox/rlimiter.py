@@ -55,10 +55,18 @@ class SandboxRlimiter(object):
                 continue
             param = self.ULIMIT_PARAMS[rlimit]
             rsoft, rhard = resource.getrlimit(int(rlimit))
-            yield "ulimit -S%s %s" % (param, min(soft, rsoft))
-            yield "ulimit -H%s %s" % (param, min(hard, rhard))
+            yield "ulimit -S%s %s" % (param, minpositive(soft, rsoft))
+            yield "ulimit -H%s %s" % (param, minpositive(hard, rhard))
 
     @classmethod
     def spawn(cls, reactor, protocol, rlimits, args, **kwargs):
         self = cls(rlimits, args, **kwargs)
         self.execute(reactor, protocol)
+
+
+def minpositive(a, b):
+    if a < 0:
+        return b
+    if b < 0:
+        return a
+    return min(a, b)
