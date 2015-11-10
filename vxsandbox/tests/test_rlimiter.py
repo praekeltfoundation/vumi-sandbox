@@ -1,20 +1,68 @@
 """Tests for vxsandbox.rlimiter."""
 
+import resource
+
 from vumi.tests.helpers import VumiTestCase
 
-from vxsandbox import rlimiter
 from vxsandbox.rlimiter import SandboxRlimiter
 
 
 class TestSandboxRlimiter(VumiTestCase):
-    def test_script_name_dot_py(self):
-        self.patch(rlimiter, '__file__', 'foo.py')
-        self.assertEqual(SandboxRlimiter.script_name(), 'foo.py')
+    """
+    The actual spawning of the process is tested elsewhere.
+    """
 
-    def test_script_name_dot_pyc(self):
-        self.patch(rlimiter, '__file__', 'foo.pyc')
-        self.assertEqual(SandboxRlimiter.script_name(), 'foo.py')
+    def test_build_script(self):
+        """
+        The script contains a bunch of `ulimit` commands and an `exec`.
+        """
+        rlimiter = SandboxRlimiter({
+            resource.RLIMIT_CPU: (40, 60),
+            resource.RLIMIT_NOFILE: (15, 15),
+        }, [])
+        self.assertEqual(rlimiter.build_script(), "\n".join([
+            "#!/bin/bash",
+            "",
+            "# Set resource limits.",
+            "ulimit -St 40",
+            "ulimit -Ht 60",
+            "ulimit -Sn 15",
+            "ulimit -Hn 15",
+            "",
+            'exec "$@"',
+        ]))
 
-    def test_script_name_dot_pyo(self):
-        self.patch(rlimiter, '__file__', 'foo.pyo')
-        self.assertEqual(SandboxRlimiter.script_name(), 'foo.py')
+    def test_build_script_no_RLIMIT_STACK(self):
+        """
+        We don't emit a `ulimit` command for RLIMIT_STACK because we're not
+        allowed to set that.
+        """
+        rlimiter = SandboxRlimiter({
+            resource.RLIMIT_CPU: (40, 60),
+            resource.RLIMIT_NOFILE: (15, 15),
+            resource.RLIMIT_STACK: (100, 100),
+        }, [])
+        self.assertEqual(rlimiter.build_script(), "\n".join([
+            "#!/bin/bash",
+            "",
+            "# Set resource limits.",
+            "ulimit -St 40",
+            "ulimit -Ht 60",
+            "ulimit -Sn 15",
+            "ulimit -Hn 15",
+            "",
+            'exec "$@"',
+        ]))
+
+    def test_build_args(self):
+        """
+        The args contain a bash command to run the script we built.
+        """
+        rlimiter = SandboxRlimiter({
+            resource.RLIMIT_CPU: (40, 60),
+            resource.RLIMIT_NOFILE: (15, 15),
+        }, ['/bin/echo', 'hello', 'world'])
+        script = rlimiter.build_script()
+        self.assertEqual(rlimiter.build_args(), [
+            '-e', '-c', script, '--',
+            '/bin/echo', 'hello', 'world'])

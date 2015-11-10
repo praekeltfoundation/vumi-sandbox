@@ -50,10 +50,9 @@ class SandboxProtocol(ProcessProtocol):
     """A protocol for communicating over stdin and stdout with a sandboxed
     process.
 
-    The sandbox process is created by calling :meth:`spawn`. This:
-
-    * Spawns a new Python process that applies the supplied rlimits.
-    * The spawned process then `execs` the supplied executable.
+    The sandbox process is created by calling :meth:`spawn`. This spawns a
+    child process that applies the supplied rlimits and then `exec`s the given
+    executable and its args.
 
     Once a spawned process starts, the parent process communicates with
     it over `stdin`, `stdout` and `stderr` reading and writing a stream
@@ -64,11 +63,12 @@ class SandboxProtocol(ProcessProtocol):
     via the supplied :class:`SandboxApi`.
     """
 
-    def __init__(self, sandbox_id, api, executable, spawn_kwargs,
+    def __init__(self, sandbox_id, api, executable, args, spawn_kwargs,
                  rlimits, timeout, recv_limit):
         self.sandbox_id = sandbox_id
         self.api = api
         self.executable = executable
+        self.args = args
         self.spawn_kwargs = spawn_kwargs
         self.rlimits = rlimits
         self._started = MultiDeferred()
@@ -84,8 +84,9 @@ class SandboxProtocol(ProcessProtocol):
         api.set_sandbox(self)
 
     def spawn(self):
+        args = [self.executable] + self.args
         SandboxRlimiter.spawn(
-            reactor, self, self.executable, self.rlimits, **self.spawn_kwargs)
+            reactor, self, self.rlimits, args, **self.spawn_kwargs)
 
     def done(self):
         """Returns a deferred that will be called when the process ends."""
