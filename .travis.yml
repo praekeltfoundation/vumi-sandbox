@@ -1,3 +1,5 @@
+sudo: false # We want container builds.
+
 language: python
 python:
   - "2.6"
@@ -8,14 +10,25 @@ matrix:
   include:
     # Test on pypy without coverage, because it's unnecessary and very slow.
     - python: "pypy"
-      env: NO_COVERAGE="1"
+      env: PYPY_VERSION="4.0.0" NO_COVERAGE="1"
+
+cache:
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/downloads
 services:
   - redis-server
+
+before_install:
+  # If necessary, set up an appropriate version of pypy.
+  - if [ ! -z "$PYPY_VERSION" ]; then source utils/setup-pypy-travis.sh; fi
 install:
   - "pip install -r requirements.txt"
   - "pip install coveralls"
+
 script:
   - if [ -z "$NO_COVERAGE" ]; then COVERAGE_CMD="coverage run --source=vxsandbox"; else COVERAGE_CMD=""; fi
   - VUMITEST_REDIS_DB=1 VUMI_TEST_NODE_PATH="$(which node)" $COVERAGE_CMD `which trial` vxsandbox
+
 after_success:
   - if [ -z "$NO_COVERAGE" ]; then coveralls; fi
