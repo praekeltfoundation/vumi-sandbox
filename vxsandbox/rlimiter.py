@@ -17,23 +17,21 @@ class SandboxRlimiter(object):
     See http://twistedmatrix.com/trac/ticket/4159.
     """
 
+    # From the bash manual, regarding ulimit:
+    # Values are in 1024-byte increments, except for -t, which is in seconds;
+    # -p, which is in units of 512-byte blocks; and -T, -b, -n and -u, which
+    # are unscaled values.
     ULIMIT_PARAMS = {
-        resource.RLIMIT_CORE: "c",
-        resource.RLIMIT_CPU: "t",
-        resource.RLIMIT_FSIZE: "f",
-        resource.RLIMIT_DATA: "d",
-        resource.RLIMIT_STACK: "s",
-        resource.RLIMIT_RSS: "m",
-        resource.RLIMIT_NOFILE: "n",
-        resource.RLIMIT_MEMLOCK: "l",
-        resource.RLIMIT_AS: "v",
+        resource.RLIMIT_CORE: ("c", 1024),
+        resource.RLIMIT_CPU: ("t", 1),
+        resource.RLIMIT_FSIZE: ("f", 1024),
+        resource.RLIMIT_DATA: ("d", 1024),
+        resource.RLIMIT_STACK: ("s", 1024),
+        resource.RLIMIT_RSS: ("m", 1024),
+        resource.RLIMIT_NOFILE: ("n", 1),
+        resource.RLIMIT_MEMLOCK: ("l", 1024),
+        resource.RLIMIT_AS: ("v", 1024),
     }
-
-    # These ones can't always be set, so ignore them.
-    ULIMIT_SKIP = (
-        resource.RLIMIT_STACK,
-        resource.RLIMIT_MEMLOCK,
-    )
 
     def __init__(self, rlimits, args, **kwargs):
         self._args = args
@@ -56,13 +54,10 @@ class SandboxRlimiter(object):
     def _build_rlimit_commands(self):
         yield "# Set resource limits."
         for rlimit, (soft, hard) in sorted(self._rlimits.items()):
-            if rlimit in self.ULIMIT_SKIP:
-                # We can't set this one.
-                continue
-            param = self.ULIMIT_PARAMS[rlimit]
+            param, scale = self.ULIMIT_PARAMS[rlimit]
             rsoft, rhard = resource.getrlimit(int(rlimit))
-            yield "ulimit -S%s %s" % (param, minpositive(soft, rsoft))
-            yield "ulimit -H%s %s" % (param, minpositive(hard, rhard))
+            yield "ulimit -S%s %s" % (param, ulimit_value(soft, rsoft, scale))
+            yield "ulimit -H%s %s" % (param, ulimit_value(hard, rhard, scale))
 
     @classmethod
     def spawn(cls, reactor, protocol, rlimits, args, **kwargs):
@@ -70,9 +65,8 @@ class SandboxRlimiter(object):
         self.execute(reactor, protocol)
 
 
-def minpositive(a, b):
-    if a < 0:
-        return b
-    if b < 0:
-        return a
-    return min(a, b)
+def ulimit_value(new, current, scale):
+    if current >= 0 and (new < 0 or new > current):
+        # The current limit is lower than the new one, so use that instead.
+        return current / scale
+    return new / scale if new >= 0 else "unlimited"
