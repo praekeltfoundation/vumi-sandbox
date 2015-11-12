@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="vxsandbox",
-    version="0.6.0",
+    version="0.6.1a0",
     url='http://github.com/praekelt/vumi-sandbox',
     license='BSD',
     description="A sandbox application worker for Vumi.",
