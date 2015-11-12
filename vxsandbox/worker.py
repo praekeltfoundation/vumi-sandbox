@@ -226,7 +226,7 @@ class Sandbox(ApplicationWorker):
         return SandboxResources(self, config)
 
     def get_executable_and_args(self, config):
-        return config.executable, [config.executable] + config.args
+        return config.executable, config.args
 
     def get_rlimits(self, config):
         rlimits = self.DEFAULT_RLIMITS.copy()
@@ -234,13 +234,12 @@ class Sandbox(ApplicationWorker):
         return rlimits
 
     def create_sandbox_protocol(self, api):
-        executable, args = self.get_executable_and_args(api.config)
         rlimits = self.get_rlimits(api.config)
-        spawn_kwargs = dict(
-            args=args, env=api.config.env, path=api.config.path)
+        spawn_kwargs = dict(env=api.config.env, path=api.config.path)
+        executable, args = self.get_executable_and_args(api.config)
         return SandboxProtocol(
-            api.config.sandbox_id, api, executable, spawn_kwargs, rlimits,
-            api.config.timeout, api.config.recv_limit)
+            api.config.sandbox_id, api, executable, args, spawn_kwargs,
+            rlimits, api.config.timeout, api.config.recv_limit)
 
     def create_sandbox_api(self, resources, config):
         return SandboxApi(resources, config)
@@ -416,7 +415,7 @@ class JsSandbox(Sandbox):
         if executable is None:
             executable = self.find_nodejs()
 
-        args = [executable] + (config.args or [self.find_sandbox_js()])
+        args = config.args or [self.find_sandbox_js()]
 
         return executable, args
 
