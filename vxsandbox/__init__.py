@@ -1,6 +1,6 @@
 """ Sandbox application worker for Vumi. """
 
-__version__ = "0.5.5a"
+__version__ = "0.6.0"
 
 __all__ = [
     "Sandbox", "JsSandbox", "JsFileSandbox", "SandboxError", "SandboxResource",
