@@ -23,6 +23,8 @@ before_install:
   - if [ ! -z "$PYPY_VERSION" ]; then source utils/setup-pypy-travis.sh; fi
   - if [ ! -z "$PYPY_VERSION" ]; then python --version 2>&1 | fgrep "PyPy $PYPY_VERSION"; fi
 install:
+  # Update pip because Travis has 6.x which doesn't cache wheels
+  - "pip install pip>=8.0.0"
   - "pip install -r requirements.txt"
   - "pip install coveralls"
 
