@@ -13,3 +13,5 @@ RUN apt-get-install.sh nodejs=${NODEJS_VERSION}*
 
 ENV VXSANDBOX_VERSION "0.6.0"
 RUN pip install vxsandbox==$VXSANDBOX_VERSION
+
+ENV WORKER_CLASS "vxsandbox.worker.StandaloneJsFileSandbox"
