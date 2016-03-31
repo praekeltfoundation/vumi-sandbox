@@ -374,17 +374,6 @@ class TestHttpClientResource(ResourceTestCaseBase):
         self.assert_http_request('https://www.example.com', method='HEAD')
 
     @inlineCallbacks
-    def test_data_limit_exceeded_using_delete_method(self):
-        self.http_request_succeed('', headers={
-            'Content-Length': self.resource.DEFAULT_DATA_LIMIT + 1,
-        })
-        reply = yield self.dispatch_command(
-            'delete', url='https://www.example.com',)
-        self.assertTrue(reply['success'])
-        self.assertEqual(reply['body'], "")
-        self.assert_http_request('https://www.example.com', method='DELETE')
-
-    @inlineCallbacks
     def test_data_limit_exceeded_using_header(self):
         self.http_request_succeed('', headers={
             'Content-Length': self.resource.DEFAULT_DATA_LIMIT + 1,

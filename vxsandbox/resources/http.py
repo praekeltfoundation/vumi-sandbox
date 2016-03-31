@@ -237,7 +237,7 @@ class HttpClientResource(SandboxResource):
                     % (length, data_limit,))
             return response
 
-        if header is None or method.upper() in ['DELETE', 'HEAD']:
+        if header is None or method.upper() == 'HEAD':
             d = response.content()
             d.addCallback(lambda body: data_limit_check(response, len(body)))
             return d
