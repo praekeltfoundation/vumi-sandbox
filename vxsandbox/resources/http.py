@@ -224,10 +224,10 @@ class HttpClientResource(SandboxResource):
         d = http_client.request(method, url, headers=headers, data=data,
                                 files=files, timeout=timeout)
 
-        d.addCallback(self._ensure_data_limit, data_limit)
+        d.addCallback(self._ensure_data_limit, method, data_limit)
         return d
 
-    def _ensure_data_limit(self, response, data_limit):
+    def _ensure_data_limit(self, response, method, data_limit):
         header = response.headers.getRawHeaders('Content-Length')
 
         def data_limit_check(response, length):
@@ -237,7 +237,7 @@ class HttpClientResource(SandboxResource):
                     % (length, data_limit,))
             return response
 
-        if header is None:
+        if header is None or method.upper() in ['DELETE', 'HEAD']:
             d = response.content()
             d.addCallback(lambda body: data_limit_check(response, len(body)))
             return d
