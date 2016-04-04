@@ -5,6 +5,7 @@ python:
   - "2.7"
 node_js:
   - "0.10"
+  - "4"
 matrix:
   include:
     # Test on pypy without coverage, because it's unnecessary and very slow.
