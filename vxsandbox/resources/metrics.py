@@ -78,9 +78,7 @@ class MetricsResource(SandboxResource):
     """Resource that provides metric storing."""
 
     def _publish_event(self, api, ev):
-        """
-        publish event
-        """
+        """Publish a metric event."""
 
     def handle_fire(self, api, command):
         """Fire a metric value."""
