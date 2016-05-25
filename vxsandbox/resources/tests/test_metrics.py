@@ -1,7 +1,5 @@
 """Tests for go.apps.jsbox.metrics."""
 
-import mock
-
 from vxsandbox.resources import SandboxCommand
 
 from vumi.tests.helpers import VumiTestCase
@@ -94,12 +92,7 @@ class TestMetricsResource(VumiTestCase):
     SUM = MetricEvent.AGGREGATORS['sum']
 
     def setUp(self):
-        self.conversation = mock.Mock()
-        self.app_worker = mock.Mock()
         self.dummy_api = object()
-        self.resource = MetricsResource("test", self.app_worker, {})
-        self.app_worker.conversation_for_api = mock.Mock(
-            return_value=self.conversation)
 
     def check_reply(self, reply, cmd, success):
         self.assertEqual(reply['reply'], True)
@@ -114,23 +107,17 @@ class TestMetricsResource(VumiTestCase):
         self.assertFalse(self.app_worker.publish_account_metric.called)
 
     def test_handle_fire(self):
-        cmd = SandboxCommand(metric="foo", value=1.5, agg='sum')
-        reply = self.resource.handle_fire(self.dummy_api, cmd)
-        self.check_reply(reply, cmd, True)
-        self.check_publish('default', 'foo', 1.5, self.SUM)
+        """
+        """
 
     def _test_error(self, cmd, expected_error):
         reply = self.resource.handle_fire(self.dummy_api, cmd)
         self.check_reply(reply, cmd, False)
-        self.assertEqual(reply['reason'], expected_error)
-        self.check_not_published()
 
     def test_handle_fire_error(self):
-        cmd = SandboxCommand(metric="foo bar", value=1.5, agg='sum')
-        expected_error = "Invalid metric name: 'foo bar'."
-        self._test_error(cmd, expected_error)
+        """
+        """
 
     def test_non_ascii_metric_name_error(self):
-        cmd = SandboxCommand(metric=u"b\xe6r", value=1.5, agg='sum')
-        expected_error = "Invalid metric name: u'b\\xe6r'."
-        self._test_error(cmd, expected_error)
+        """
+        """
