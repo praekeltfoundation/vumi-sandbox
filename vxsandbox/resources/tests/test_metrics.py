@@ -116,6 +116,8 @@ class TestMetricsResource(VumiTestCase):
     def _test_error(self, cmd, expected_error):
         reply = self.resource.handle_fire(self.dummy_api, cmd)
         self.check_reply(reply, cmd, False)
+        self.assertEqual(reply['reason'], expected_error)
+        self.check_not_published()
 
     def test_handle_fire_error(self):
         """
