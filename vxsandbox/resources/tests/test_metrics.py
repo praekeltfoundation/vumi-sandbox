@@ -1,8 +1,9 @@
 """Tests for go.apps.jsbox.metrics."""
 
 from vxsandbox.resources import SandboxCommand
-
+from twisted.internet.defer import inlineCallbacks
 from vumi.tests.helpers import VumiTestCase
+from vxsandbox.resources.tests.utils import ResourceTestCaseBase
 
 from vxsandbox.resources.metrics import (
     MetricEvent, MetricEventError, MetricsResource)
@@ -87,42 +88,43 @@ class TestMetricEvent(VumiTestCase):
                 'store': 'mystore', 'metric': 'foo', 'value': 1.5})
 
 
-class TestMetricsResource(VumiTestCase):
+class TestMetricsResource(ResourceTestCaseBase):
 
     SUM = MetricEvent.AGGREGATORS['sum']
+    resource_cls = MetricsResource
 
+    @inlineCallbacks
     def setUp(self):
-        self.dummy_api = object()
-
-    def check_reply(self, reply, cmd, success):
-        self.assertEqual(reply['reply'], True)
-        self.assertEqual(reply['cmd_id'], cmd['cmd_id'])
-        self.assertEqual(reply['success'], success)
+        super(TestMetricsResource, self).setUp()
+        yield self.create_resource({})
 
     def check_publish(self, store, metric, value, agg):
-        """
         pass  # TODO: check that a metric is published
-        """
 
     def check_not_published(self):
-        """
         pass  # TODO: check that a metric is not published
-        """
 
+    @inlineCallbacks
     def test_handle_fire(self):
-        """
-        """
+        reply = yield self.dispatch_command(
+            'fire', metric="foo", value=1.5, agg='sum')
+        self.check_reply(reply, success=True)
+        self.check_publish('default', 'foo', 1.5, self.SUM)
 
-    def _test_error(self, cmd, expected_error):
-        reply = self.resource.handle_fire(self.dummy_api, cmd)
-        self.check_reply(reply, cmd, False)
+    @inlineCallbacks
+    def test_handle_fire_error(self):
+        reply = yield self.dispatch_command(
+            'fire', metric=u"foo bar", value=1.5, agg='sum')
+        expected_error = "Invalid metric name: u'foo bar'."
+        self.check_reply(reply, success=False)
         self.assertEqual(reply['reason'], expected_error)
         self.check_not_published()
 
-    def test_handle_fire_error(self):
-        """
-        """
-
+    @inlineCallbacks
     def test_non_ascii_metric_name_error(self):
-        """
-        """
+        reply = yield self.dispatch_command(
+            'fire', metric=u"b\xe6r", value=1.5, agg='sum')
+        expected_error = "Invalid metric name: u'b\\xe6r'."
+        self.check_reply(reply, success=False)
+        self.assertEqual(reply['reason'], expected_error)
+        self.check_not_published()
