@@ -544,11 +544,13 @@ class TestStandaloneJsFileSandbox(SandboxTestCaseBase, JsSandboxTestMixin):
 
 
 class TestSandboxApi(VumiTestCase):
+    @inlineCallbacks
     def setUp(self):
         self.sent_messages = DeferredQueue()
         self.patch(SandboxApi, 'sandbox_send',
                    staticmethod(lambda msg: self.sent_messages.put(msg)))
-        self.app = DummyAppWorker()
+        self.app_helper = self.add_helper(ApplicationHelper(DummyAppWorker))
+        self.app = yield self.app_helper.get_application({})
         self.resources = SandboxResources(self.app, {})
         self.api = SandboxApi(self.resources, self.app)
 
