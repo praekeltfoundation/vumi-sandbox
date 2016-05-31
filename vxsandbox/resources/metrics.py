@@ -10,7 +10,7 @@ from twisted.internet.defer import inlineCallbacks
 from vumi.errors import ConfigError
 
 from vumi.blinkenlights.metrics import (
-    SUM, AVG, MIN, MAX, LAST, MetricPublisher, Metric)
+    SUM, AVG, MIN, MAX, LAST, MetricPublisher, Metric, MetricManager)
 
 
 class MetricEventError(Exception):
@@ -102,9 +102,9 @@ class MetricsResource(SandboxResource):
         """Publish a metric event."""
         if ev.agg is not None:
             agg = [ev.agg]
-        metric = Metric(ev.name, agg)
-        prefix = self._metric_manager_prefix(ev.store_name)
-        manager = self.MetricManager(prefix, publisher=self.metric_publisher)
+        metric = Metric(ev.metric, agg)
+        prefix = self._metric_manager_prefix(ev.store)
+        manager = MetricManager(prefix, publisher=self.metric_publisher)
         manager.oneshot(metric, ev.value)
         manager.publish_metrics()
 
