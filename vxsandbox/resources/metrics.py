@@ -91,6 +91,8 @@ class MetricsResource(SandboxResource):
         prefix = self.config.get('metrics_prefix', None)
         if prefix is None:
             raise ConfigError("Metrics key given does not exist")
+        self.metric_publisher = yield self.app_worker.start_publisher(
+            MetricPublisher)
 
     def _metric_manager_prefix(self, store_name):
         prefix = self.config['metrics_prefix']
