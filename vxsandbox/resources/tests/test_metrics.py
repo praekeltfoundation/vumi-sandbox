@@ -1,6 +1,5 @@
 """Tests for go.apps.jsbox.metrics."""
 
-from vxsandbox.resources import SandboxCommand
 from twisted.internet.defer import inlineCallbacks
 from vumi.tests.helpers import VumiTestCase
 from vxsandbox.resources.tests.utils import ResourceTestCaseBase
@@ -95,7 +94,7 @@ class TestMetricsResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def setUp(self):
-        super(TestMetricsResource, self).setUp()
+        yield super(TestMetricsResource, self).setUp()
         yield self.create_resource({})
 
     def create_resource(self, config):
