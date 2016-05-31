@@ -89,6 +89,7 @@ class TestMetricEvent(VumiTestCase):
 
 class TestMetricsResource(ResourceTestCaseBase):
 
+    PREFIX = 'test_metrics_prefix'
     SUM = MetricEvent.AGGREGATORS['sum']
     resource_cls = MetricsResource
 
@@ -98,21 +99,31 @@ class TestMetricsResource(ResourceTestCaseBase):
         yield self.create_resource({})
 
     def create_resource(self, config):
-        config.setdefault('metrics_prefix', {})
+        config.setdefault('metrics_prefix', self.PREFIX)
         return super(TestMetricsResource, self).create_resource(config)
 
+    @inlineCallbacks
     def check_publish(self, store, metric, value, agg):
-        pass  # TODO: check that a metric is published
+        [metric_data] = yield self.app_helper.get_dispatched_metrics()
+        [metric_datum] = metric_data
+        [metric_name, aggs, points] = metric_datum
+        [data_point] = points
+        self.assertEqual(
+            metric_name, "%s.stores.%s.%s" % (self.PREFIX, store, metric))
+        self.assertEqual(aggs, [agg.name])
+        self.assertEqual(data_point[1], value)
 
+    @inlineCallbacks
     def check_not_published(self):
-        pass  # TODO: check that a metric is not published
+        metrics = yield self.app_helper.get_dispatched_metrics()
+        self.assertEqual(metrics, [])
 
     @inlineCallbacks
     def test_handle_fire(self):
         reply = yield self.dispatch_command(
             'fire', metric="foo", value=1.5, agg='sum')
         self.check_reply(reply, success=True)
-        self.check_publish('default', 'foo', 1.5, self.SUM)
+        yield self.check_publish('default', 'foo', 1.5, self.SUM)
 
     @inlineCallbacks
     def test_handle_fire_error(self):
@@ -121,7 +132,7 @@ class TestMetricsResource(ResourceTestCaseBase):
         expected_error = "Invalid metric name: u'foo bar'."
         self.check_reply(reply, success=False)
         self.assertEqual(reply['reason'], expected_error)
-        self.check_not_published()
+        yield self.check_not_published()
 
     @inlineCallbacks
     def test_non_ascii_metric_name_error(self):
@@ -130,4 +141,4 @@ class TestMetricsResource(ResourceTestCaseBase):
         expected_error = "Invalid metric name: u'b\\xe6r'."
         self.check_reply(reply, success=False)
         self.assertEqual(reply['reason'], expected_error)
-        self.check_not_published()
+        yield self.check_not_published()
