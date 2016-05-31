@@ -1,7 +1,9 @@
 from collections import defaultdict
 
+from vumi.application.base import ApplicationWorker
 
-class DummyAppWorker(object):
+
+class DummyAppWorker(ApplicationWorker):
 
     class DummyApi(object):
         def __init__(self):
@@ -23,7 +25,8 @@ class DummyAppWorker(object):
     sandbox_api_cls = DummyApi
     sandbox_protocol_cls = DummyProtocol
 
-    def __init__(self):
+    def __init__(self, *args, **kw):
+        super(DummyAppWorker, self).__init__(*args, **kw)
         self.mock_calls = defaultdict(list)
         self.mock_returns = {}
 
