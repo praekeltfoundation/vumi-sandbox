@@ -98,6 +98,10 @@ class TestMetricsResource(ResourceTestCaseBase):
         super(TestMetricsResource, self).setUp()
         yield self.create_resource({})
 
+    # def create_resource(self, config):
+    #     config.setdefault('metrics_prefix', {})
+    #     return super(TestMetricsResource, self).create_resource(config)
+
     def check_publish(self, store, metric, value, agg):
         pass  # TODO: check that a metric is published
 
