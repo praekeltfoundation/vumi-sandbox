@@ -6,8 +6,11 @@
 import re
 
 from vxsandbox import SandboxResource
+from twisted.internet.defer import inlineCallbacks
+from vumi.errors import ConfigError
 
-from vumi.blinkenlights.metrics import SUM, AVG, MIN, MAX, LAST
+from vumi.blinkenlights.metrics import (
+    SUM, AVG, MIN, MAX, LAST, MetricPublisher, Metric, MetricManager)
 
 
 class MetricEventError(Exception):
@@ -75,10 +78,35 @@ class MetricEvent(object):
 
 
 class MetricsResource(SandboxResource):
-    """Resource that provides metric storing."""
+    """Resource that provides metric storing.
+
+    TODO: Describe how to set metrics_prefix.
+    #         return "%scampaigns.%s.stores.%s." % (
+    :param string metrics_prefix:
+        metrics prefix configuration.
+
+    """
+    @inlineCallbacks
+    def setup(self):
+        prefix = self.config.get('metrics_prefix', None)
+        if prefix is None:
+            raise ConfigError("metrics_prefix config parameter not supplied")
+        self.metric_publisher = yield self.app_worker.start_publisher(
+            MetricPublisher)
+
+    def _metric_manager_prefix(self, store_name):
+        prefix = self.config['metrics_prefix']
+        return "%s.stores.%s." % (prefix, store_name)
 
     def _publish_event(self, api, ev):
         """Publish a metric event."""
+        if ev.agg is not None:
+            agg = [ev.agg]
+        metric = Metric(ev.metric, agg)
+        prefix = self._metric_manager_prefix(ev.store)
+        manager = MetricManager(prefix, publisher=self.metric_publisher)
+        manager.oneshot(metric, ev.value)
+        manager.publish_metrics()
 
     def handle_fire(self, api, command):
         """Fire a metric value."""

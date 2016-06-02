@@ -94,7 +94,8 @@ class OutboundResource(SandboxResource):
             raise InvalidOutboundCommand(
                 u"'endpoint' must be given in sends.")
         try:
-            self.app_worker.check_endpoint(endpoint)
+            self.app_worker.check_endpoint(
+                self.app_worker.ALLOWED_ENDPOINTS, endpoint)
         except InvalidEndpoint:
             raise InvalidOutboundCommand(
                 u"Endpoint %r not configured" % (endpoint,))

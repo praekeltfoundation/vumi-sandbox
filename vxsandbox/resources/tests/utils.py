@@ -1,5 +1,6 @@
 from twisted.internet.defer import inlineCallbacks
 
+from vumi.application.tests.helpers import ApplicationHelper
 from vumi.tests.helpers import VumiTestCase
 
 from vxsandbox.resources.utils import SandboxCommand
@@ -13,8 +14,11 @@ class ResourceTestCaseBase(VumiTestCase):
     resource_name = 'test_resource'
     sandbox_id = 'test_id'
 
+    @inlineCallbacks
     def setUp(self):
-        self.app_worker = self.app_worker_cls()
+        self.app_helper = self.add_helper(
+            ApplicationHelper(self.app_worker_cls))
+        self.app_worker = yield self.app_helper.get_application({})
         self.resource = None
         self.api = self.app_worker.create_sandbox_api()
         self.sandbox = self.app_worker.create_sandbox_protocol(self.sandbox_id,
