@@ -82,7 +82,7 @@ class MetricsResource(SandboxResource):
 
     TODO: Describe how to set metrics_prefix.
     #         return "%scampaigns.%s.stores.%s." % (
-    :param dict metrics_prefix:
+    :param string metrics_prefix:
         metrics prefix configuration.
 
     """
