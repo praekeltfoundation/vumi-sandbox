@@ -80,9 +80,12 @@ class MetricEvent(object):
 class MetricsResource(SandboxResource):
     """Resource that provides metric storing.
 
-    TODO: Describe how to set metrics_prefix.
     :param string metrics_prefix:
         metrics prefix configuration.
+
+    Example:
+        Metric name will look something like this:
+            'myprefix', 'mystore name'
 
     """
     @inlineCallbacks
