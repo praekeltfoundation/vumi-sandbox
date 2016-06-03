@@ -81,7 +81,6 @@ class MetricsResource(SandboxResource):
     """Resource that provides metric storing.
 
     TODO: Describe how to set metrics_prefix.
-    #         return "%scampaigns.%s.stores.%s." % (
     :param string metrics_prefix:
         metrics prefix configuration.
 
