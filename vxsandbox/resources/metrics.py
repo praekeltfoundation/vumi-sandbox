@@ -5,12 +5,12 @@
 
 import re
 
-from vxsandbox import SandboxResource
 from twisted.internet.defer import inlineCallbacks
 from vumi.errors import ConfigError
-
 from vumi.blinkenlights.metrics import (
     SUM, AVG, MIN, MAX, LAST, MetricPublisher, Metric, MetricManager)
+
+from .utils import SandboxResource
 
 
 class MetricEventError(Exception):
