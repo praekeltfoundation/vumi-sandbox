@@ -81,12 +81,8 @@ class MetricsResource(SandboxResource):
     """Resource that provides metric storing.
 
     :param string metrics_prefix:
-        metrics prefix configuration.
-
-    Example:
-        Metric name will look something like this:
-            'myprefix', 'mystore name'
-
+        Prefix for metric names. Metric names will be structured
+        as `<metrics_prefix>.stores.<store_name>.<metric_name>`.
     """
     @inlineCallbacks
     def setup(self):
