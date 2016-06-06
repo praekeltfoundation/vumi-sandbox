@@ -5,12 +5,12 @@
 
 import re
 
-from vxsandbox import SandboxResource
 from twisted.internet.defer import inlineCallbacks
 from vumi.errors import ConfigError
-
 from vumi.blinkenlights.metrics import (
     SUM, AVG, MIN, MAX, LAST, MetricPublisher, Metric, MetricManager)
+
+from .utils import SandboxResource
 
 
 class MetricEventError(Exception):
@@ -80,11 +80,9 @@ class MetricEvent(object):
 class MetricsResource(SandboxResource):
     """Resource that provides metric storing.
 
-    TODO: Describe how to set metrics_prefix.
-    #         return "%scampaigns.%s.stores.%s." % (
     :param string metrics_prefix:
-        metrics prefix configuration.
-
+        Prefix for metric names. Metric names will be structured
+        as `<metrics_prefix>.stores.<store_name>.<metric_name>`.
     """
     @inlineCallbacks
     def setup(self):
