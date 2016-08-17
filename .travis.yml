@@ -33,8 +33,8 @@ install:
   - if [[ -z "$NO_COVERAGE" ]]; then pip install coveralls; fi
 
 script:
-  - if [ -z "$NO_COVERAGE" ]; then COVERAGE_CMD="coverage run --source=vxsandbox"; else COVERAGE_CMD=""; fi
+  - if [[ -z "$NO_COVERAGE" ]]; then COVERAGE_CMD="coverage run --source=vxsandbox"; else COVERAGE_CMD=""; fi
   - VUMITEST_REDIS_DB=1 VUMI_TEST_NODE_PATH="$(which node)" $COVERAGE_CMD `which trial` vxsandbox
 
 after_success:
-  - if [ -z "$NO_COVERAGE" ]; then coveralls; fi
+  - if [[ -z "$NO_COVERAGE" ]]; then coveralls; fi
