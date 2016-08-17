@@ -12,8 +12,8 @@ matrix:
       env: PYPY_VERSION="5.3.1" NO_COVERAGE="1"
 
 cache:
-  directories:
-    - $HOME/.cache/pip
+  - pip
+  - directories:
     - $HOME/.pyenv_cache
 services:
   - redis-server
