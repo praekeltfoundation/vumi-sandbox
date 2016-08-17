@@ -25,11 +25,12 @@ before_install:
         wget https://github.com/praekeltfoundation/travis-pypy/releases/download/0.1.0/setup-pypy.sh
         source setup-pypy.sh
       fi
+  # Upgrade pip to make sure we get wheel caching
+  - pip install --upgrade pip
+
 install:
-  # Update pip because Travis has 6.x which doesn't cache wheels
-  - "pip install pip>=8.0.0"
-  - "pip install -r requirements.txt"
-  - "pip install coveralls"
+  - pip install -e .
+  - if [[ -z "$NO_COVERAGE" ]]; then pip install coveralls; fi
 
 script:
   - if [ -z "$NO_COVERAGE" ]; then COVERAGE_CMD="coverage run --source=vxsandbox"; else COVERAGE_CMD=""; fi
