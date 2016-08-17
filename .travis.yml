@@ -4,8 +4,9 @@ language: python
 python:
   - "2.7"
 env:
-  - NODEJS_VERSION="0.10"
-  - NODEJS_VERSION="4.5.0"
+  - NODEJS_VERSION="0.10"  # Ubuntu 14.04 / Debian 8 packages
+  - NODEJS_VERSION="4.5.0" # LTS release
+  - NODEJS_VERSION="6.4.0" # Current release
 matrix:
   include:
     # Test on pypy without coverage, because it's unnecessary and very slow.
