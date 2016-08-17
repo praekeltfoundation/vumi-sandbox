@@ -5,12 +5,12 @@ python:
   - "2.7"
 env:
   - NODEJS_VERSION="0.10"
-  - NODEJS_VERSION="4.4"
+  - NODEJS_VERSION="4.5.0"
 matrix:
   include:
     # Test on pypy without coverage, because it's unnecessary and very slow.
     - python: "pypy"
-      env: PYPY_VERSION="4.0.1" NO_COVERAGE="1" NODEJS_VERSION="4.4"
+      env: PYPY_VERSION="4.0.1" NO_COVERAGE="1" NODEJS_VERSION="4.5.0"
 
 cache:
   directories:
