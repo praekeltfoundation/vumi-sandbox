@@ -1,9 +1,7 @@
-from twisted.internet.defer import succeed, inlineCallbacks
+from twisted.internet.defer import inlineCallbacks
 
-from vumi.errors import InvalidEndpoint
-
-from vxsandbox.resources.outbound import OutboundResource
 from vxsandbox.resources.tests.utils import ResourceTestCaseBase
+from vxsandbox.resources.outbound import OutboundResource
 from vxsandbox.tests.utils import DummyAppWorker
 
 
@@ -18,15 +16,10 @@ class StubbedAppWorker(DummyAppWorker):
 
     sandbox_api_cls = DummyApi
 
-    def __init__(self):
-        super(StubbedAppWorker, self).__init__()
+    def __init__(self, *args, **kw):
+        super(StubbedAppWorker, self).__init__(*args, **kw)
         self._inbound_messages = {}
-        self._valid_endpoints = set(['default'])
-
-    def check_endpoint(self, endpoint):
-        if endpoint not in self._valid_endpoints:
-            raise InvalidEndpoint(
-                "Endpoint %r is not configured" % (endpoint,))
+        self.ALLOWED_ENDPOINTS = set(self.ALLOWED_ENDPOINTS)
 
     def create_sandbox_api(self):
         return self.sandbox_api_cls(self._inbound_messages)
@@ -35,7 +28,7 @@ class StubbedAppWorker(DummyAppWorker):
         self._inbound_messages[msg['message_id']] = msg
 
     def add_endpoint(self, endpoint):
-        self._valid_endpoints.add(endpoint)
+        self.ALLOWED_ENDPOINTS.add(endpoint)
 
 
 class TestOutboundResource(ResourceTestCaseBase):
@@ -54,28 +47,38 @@ class TestOutboundResource(ResourceTestCaseBase):
         yield self.create_resource(resource_config or {})
         reply = yield self.dispatch_command(cmd, **cmd_args)
         self.check_reply(reply, success=False, reason=reason)
-        self.assertEqual(self.app_worker.mock_calls['send_to'], [])
-        self.assertEqual(self.app_worker.mock_calls['reply_to'], [])
-        self.assertEqual(self.app_worker.mock_calls['reply_to_group'], [])
+        outbounds = yield self.app_helper.get_dispatched_outbound()
+        self.assertEqual(outbounds, [])
 
+    @inlineCallbacks
     def assert_sent(self, to_addr, content, msg_options):
-        self.assertEqual(self.app_worker.mock_calls['send_to'], [
-            ((to_addr, content), msg_options),
-        ])
+        [msg] = yield self.app_helper.get_dispatched_outbound()
+        self.assertEqual(msg["to_addr"], to_addr)
+        self.assertEqual(msg["content"], content)
+        endpoint = msg_options.pop('endpoint', 'default')
+        self.assertEqual(msg.get_routing_endpoint(), endpoint)
+        for k, v in msg_options.items():
+            self.assertEqual(msg[k], v)
+
+    def mk_get_inbound_message(self, orig):
+        def get_inbound_message(msg_id):
+            if msg_id == orig["message_id"]:
+                return orig
+        return get_inbound_message
 
     @inlineCallbacks
     def test_reply_to(self):
-        self.app_worker.mock_returns['reply_to'] = succeed(None)
-        self.api.get_inbound_message = lambda msg_id: msg_id
+        orig = self.app_helper.make_inbound('hi')
+        self.api.get_inbound_message = self.mk_get_inbound_message(orig)
         reply = yield self.dispatch_command('reply_to', content='hello',
                                             continue_session=True,
-                                            in_reply_to='msg1')
+                                            in_reply_to=orig["message_id"])
         self.check_reply(reply, success=True)
-        self.assertEqual(self.app_worker.mock_calls['reply_to'], [
-            (('msg1', 'hello'), {
-                'continue_session': True, 'helper_metadata': {}
-            }),
-        ])
+        self.assert_sent(orig["from_addr"], u'hello', {
+            "in_reply_to": orig["message_id"],
+            "session_event": None,
+            "helper_metadata": {},
+        })
 
     def assert_reply_to_fails(self, reason, **kw):
         return self.assert_cmd_fails(reason, 'reply_to', **kw)
@@ -120,17 +123,18 @@ class TestOutboundResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_reply_to_group(self):
-        self.app_worker.mock_returns['reply_to_group'] = succeed(None)
-        self.api.get_inbound_message = lambda msg_id: msg_id
+        orig = self.app_helper.make_inbound('hi', group="#channel")
+        self.api.get_inbound_message = self.mk_get_inbound_message(orig)
         reply = yield self.dispatch_command('reply_to_group', content='hello',
                                             continue_session=True,
-                                            in_reply_to='msg1')
+                                            in_reply_to=orig["message_id"])
         self.check_reply(reply, success=True)
-        self.assertEqual(self.app_worker.mock_calls['reply_to_group'], [
-            (('msg1', 'hello'), {
-                'continue_session': True, 'helper_metadata': {},
-            }),
-        ])
+        self.assert_sent(None, u'hello', {
+            "in_reply_to": orig["message_id"],
+            "group": "#channel",
+            "session_event": None,
+            "helper_metadata": {},
+        })
 
     def assert_reply_to_group_fails(self, reason, **kw):
         return self.assert_cmd_fails(reason, 'reply_to_group', **kw)
@@ -163,29 +167,27 @@ class TestOutboundResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def test_send_to(self):
-        self.app_worker.mock_returns['send_to'] = succeed(None)
         reply = yield self.dispatch_command(
             'send_to', content='hello', to_addr='1234')
         self.check_reply(reply, success=True)
-        self.assertEqual(self.app_worker.mock_calls['send_to'], [
-            (('1234', 'hello'), {
-                'endpoint': 'default', 'helper_metadata': {},
-            }),
-        ])
+        yield self.assert_sent(u'1234', u'hello', {
+            'endpoint': 'default',
+            'helper_metadata': {},
+            'in_reply_to': None,
+        })
 
     @inlineCallbacks
     def test_send_to_with_endpoint(self):
         self.app_worker.add_endpoint('extra_endpoint')
-        self.app_worker.mock_returns['send_to'] = succeed(None)
         reply = yield self.dispatch_command(
             'send_to', content='hello', to_addr='1234',
             endpoint='extra_endpoint')
         self.check_reply(reply, success=True)
-        self.assertEqual(self.app_worker.mock_calls['send_to'], [
-            (('1234', 'hello'), {
-                'endpoint': 'extra_endpoint', 'helper_metadata': {},
-            }),
-        ])
+        yield self.assert_sent(u'1234', u'hello', {
+            'endpoint': 'extra_endpoint',
+            'helper_metadata': {},
+            'in_reply_to': None,
+        })
 
     def assert_send_to_fails(self, reason, **kw):
         return self.assert_cmd_fails(reason, 'send_to', **kw)
@@ -237,35 +239,34 @@ class TestOutboundResource(ResourceTestCaseBase):
     @inlineCallbacks
     def test_send_to_endpoint(self):
         self.app_worker.add_endpoint('extra_endpoint')
-        self.app_worker.mock_returns['send_to'] = succeed(None)
         yield self.create_resource({})
         reply = yield self.dispatch_command(
             'send_to_endpoint', endpoint='extra_endpoint', to_addr='6789',
             content='bar')
         self.check_reply(reply)
-        self.assert_sent('6789', 'bar', {
+        yield self.assert_sent('6789', 'bar', {
             'endpoint': 'extra_endpoint',
             'helper_metadata': {},
+            'in_reply_to': None,
         })
 
     @inlineCallbacks
     def test_send_to_endpoint_null_content(self):
         self.app_worker.add_endpoint('extra_endpoint')
-        self.app_worker.mock_returns['send_to'] = succeed(None)
         yield self.create_resource({})
         reply = yield self.dispatch_command(
             'send_to_endpoint', endpoint='extra_endpoint', to_addr='6789',
             content=None)
         self.check_reply(reply)
-        self.assert_sent('6789', None, {
+        yield self.assert_sent(u'6789', None, {
             'endpoint': 'extra_endpoint',
             'helper_metadata': {},
+            'in_reply_to': None,
         })
 
     @inlineCallbacks
     def test_send_to_endpoint_with_helper_metadata(self):
         self.app_worker.add_endpoint('extra_endpoint')
-        self.app_worker.mock_returns['send_to'] = succeed(None)
         yield self.create_resource({
             'allowed_helper_metadata': ['voice'],
         })
@@ -279,13 +280,14 @@ class TestOutboundResource(ResourceTestCaseBase):
                 },
             })
         self.check_reply(reply)
-        self.assert_sent('6789', 'bar', {
+        yield self.assert_sent(u'6789', u'bar', {
             'endpoint': 'extra_endpoint',
             'helper_metadata': {
                 'voice': {
                     'speech_url': 'http://www.example.com/audio.wav',
                 },
             },
+            'in_reply_to': None,
         })
 
     def assert_send_to_endpoint_fails(self, reason, **kw):

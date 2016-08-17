@@ -14,7 +14,7 @@ class TestLoggingResource(ResourceTestCaseBase):
 
     @inlineCallbacks
     def setUp(self):
-        super(TestLoggingResource, self).setUp()
+        yield super(TestLoggingResource, self).setUp()
         yield self.create_resource({})
 
     @inlineCallbacks
