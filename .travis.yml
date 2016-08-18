@@ -6,7 +6,7 @@ python:
 env:
   - NODEJS_VERSION="0.10"  # Ubuntu 14.04 / Debian 8 packages
   - NODEJS_VERSION="4.5.0" # LTS release
-  - NODEJS_VERSION="6.4.0" # Current release
+  - NODEJS_VERSION="node"  # Track the latest release
 matrix:
   include:
     # Test on pypy without coverage, because it's unnecessary and very slow.
