@@ -3,13 +3,15 @@ sudo: false # We want container builds.
 language: python
 python:
   - "2.7"
-node_js:
-  - "0.10"
+env:
+  - NODEJS_VERSION="0.10"  # Ubuntu 14.04 / Debian 8 packages
+  - NODEJS_VERSION="4.5.0" # LTS release
+  - NODEJS_VERSION="node"  # Track the latest release
 matrix:
   include:
     # Test on pypy without coverage, because it's unnecessary and very slow.
     - python: "pypy"
-      env: PYPY_VERSION="5.3.1" NO_COVERAGE="1"
+      env: PYPY_VERSION="5.3.1" NO_COVERAGE="1" NODEJS_VERSION="4.5.0"
 
 cache:
   - pip
@@ -27,6 +29,8 @@ before_install:
       fi
   # Upgrade pip to make sure we get wheel caching
   - pip install --upgrade pip
+  # NodeJS
+  - nvm install $NODEJS_VERSION
 
 install:
   - pip install -e .
