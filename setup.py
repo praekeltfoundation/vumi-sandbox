@@ -14,6 +14,7 @@ setup(
     install_requires=[
         'Twisted>=13.1.0',
         'vumi>=0.5',
+        'raven==3.5.2',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
