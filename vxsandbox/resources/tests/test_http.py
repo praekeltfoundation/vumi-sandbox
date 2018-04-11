@@ -160,15 +160,6 @@ class TestHttpClientResource(ResourceTestCaseBase):
         self.assertEqual(
             self.get_context(context_factory).get_verify_mode(), VERIFY_NONE)
 
-    def test_make_context_factory_sslv3_verify_none(self):
-        context_factory = make_context_factory(
-            verify_options=VERIFY_NONE, ssl_method=SSLv3_METHOD)
-        self.assertIsInstance(context_factory, HttpClientContextFactory)
-        self.assertEqual(context_factory.verify_options, VERIFY_NONE)
-        self.assertEqual(context_factory.ssl_method, SSLv3_METHOD)
-        self.assertEqual(
-            self.get_context(context_factory).get_verify_mode(), VERIFY_NONE)
-
     def test_make_context_factory_no_method_verify_peer(self):
         # This test's behaviour depends on the version of Twisted being used.
         context_factory = make_context_factory(verify_options=VERIFY_PEER)
