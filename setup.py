@@ -12,8 +12,8 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        'Twisted>=13.1.0',
-        'vumi>=0.5',
+        'Twisted>=17.9.0,<18.0.0',
+        'vumi>=0.6.18',
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
