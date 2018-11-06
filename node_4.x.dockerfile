@@ -9,7 +9,8 @@ RUN apt-get-install.sh apt-transport-https curl && \
         > /etc/apt/sources.list.d/nodesource.list && \
     apt-get-purge.sh curl
 
-RUN apt-get update && apt-get install curl -y && curl -sL https://deb.nodesource.com/setup_4.x | bash && apt-get install nodejs -y
+ENV NODEJS_VERSION "4.9.1-1nodesource1"
+RUN apt-get-install.sh nodejs=${NODEJS_VERSION}
 
 ENV VXSANDBOX_VERSION "0.6.1"
 RUN pip install vxsandbox==$VXSANDBOX_VERSION
