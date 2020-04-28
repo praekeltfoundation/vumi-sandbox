@@ -383,8 +383,7 @@ class JsSandbox(Sandbox):
 
     @classmethod
     def find_sandbox_js(cls):
-        return pkg_resources.resource_filename(
-            'vumi.application.sandbox', 'sandboxer.js')
+        return pkg_resources.resource_filename('vxsandbox', 'sandboxer.js')
 
     def get_js_resource(self):
         return JsSandboxResource('js', self, {})
