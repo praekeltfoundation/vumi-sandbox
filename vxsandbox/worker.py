@@ -7,7 +7,8 @@ import os
 import pkg_resources
 import logging
 
-from twisted.internet.defer import inlineCallbacks, returnValue, succeed
+from twisted.internet.defer import (
+    Deferred, inlineCallbacks, returnValue, succeed)
 
 from vumi.config import ConfigText, ConfigInt, ConfigList, ConfigDict
 from vumi.application.base import ApplicationWorker
@@ -36,6 +37,9 @@ class JsSandboxResource(SandboxResource):
                                         javascript=javascript,
                                         app_context=app_context))
 
+    def handle_done(self, api, command):
+        api.message_or_event_processed()
+
 
 class SandboxApi(object):
     """A sandbox API instance for a particular sandbox run."""
@@ -60,6 +64,7 @@ class SandboxApi(object):
                 potential_logger = None
         self.logging_resource = potential_logger
         self.config = config
+        self.done = Deferred()
 
     @property
     def sandbox_id(self):
@@ -71,10 +76,20 @@ class SandboxApi(object):
                                "existing id: %r, new id: %r)."
                                % (self.sandbox_id, sandbox.sandbox_id))
         self._sandbox = sandbox
+        self._sandbox_done = sandbox.done()
+        self._sandbox_done.addCallback(self._done_if_not_already_done)
+        self._sandbox_done.addErrback(self.done.errback)
+
+    def _done_if_not_already_done(self, result):
+        if not self.done.called:
+            self.done.callback(result)
 
     def sandbox_init(self):
         for sandbox_resource in self.resources.resources.values():
             sandbox_resource.sandbox_init(self)
+
+    def sandbox_exit(self):
+        self.sandbox_send(SandboxCommand(cmd="exit"))
 
     def sandbox_inbound_message(self, msg):
         self._inbound_messages[msg['message_id']] = msg
@@ -128,6 +143,9 @@ class SandboxApi(object):
         if reply is not None:
             reply['cmd'] = '%s%s%s' % (resource_name, sep, rest)
             self.sandbox_send(reply)
+
+    def message_or_event_processed(self):
+        self.done.callback(0)
 
 
 class SandboxConfig(ApplicationWorker.CONFIG_CLASS):
@@ -266,10 +284,17 @@ class Sandbox(ApplicationWorker):
     def _process_in_sandbox(self, sandbox_protocol, api_callback):
         sandbox_protocol.spawn()
 
+        def on_end(_result):
+            # FIXME: For now, we unconditionally kill the sandbox after every
+            # message.
+            sandbox_protocol.api.sandbox_exit()
+            return sandbox_protocol.done()
+
         def on_start(_result):
             sandbox_protocol.api.sandbox_init()
             api_callback()
-            d = sandbox_protocol.done()
+            d = sandbox_protocol.api.done
+            d.addCallback(on_end)
             d.addErrback(log.error)
             return d
 
