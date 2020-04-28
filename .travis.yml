@@ -10,7 +10,7 @@ matrix:
   include:
     # Test on pypy without coverage, because it's unnecessary and very slow.
     - python: "pypy"
-      env: PYPY_VERSION="7.3.1" NO_COVERAGE="1" NODEJS_VERSION="4.5.0"
+      env: PYENV_VERSION="pypy2.7-7.3.0" NO_COVERAGE="1" NODEJS_VERSION="4.5.0"
 
 cache:
   - pip
@@ -22,9 +22,9 @@ services:
 before_install:
   # If necessary, set up an appropriate version of pypy.
   - |
-      if [[ -n "$PYPY_VERSION" ]]; then
-        wget https://github.com/praekeltfoundation/travis-pypy/releases/download/0.1.0/setup-pypy.sh
-        source setup-pypy.sh
+      if [[ -n "$PYENV_VERSION" ]]; then
+        wget https://github.com/praekeltfoundation/travis-pyenv/releases/download/0.4.0/setup-pyenv.sh
+        source setup-pyenv.sh
       fi
   # Upgrade pip to make sure we get wheel caching
   - pip install --upgrade pip
