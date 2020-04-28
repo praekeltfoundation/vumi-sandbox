@@ -9,8 +9,7 @@ env:
 matrix:
   include:
     # Test on pypy without coverage, because it's unnecessary and very slow.
-    - python: "pypy"
-      env: PYENV_VERSION="pypy2.7-7.3.0" NO_COVERAGE="1" NODEJS_VERSION="4.5.0"
+    - env: PYENV_VERSION="pypy2.7-7.3.0" NO_COVERAGE="1" NODEJS_VERSION="4.5.0"
 
 cache:
   - pip
@@ -22,6 +21,7 @@ services:
 before_install:
   # If necessary, set up an appropriate version of pypy.
   - |
+      export PYENV_ROOT=$HOME/.travis-pyenv
       if [[ -n "$PYENV_VERSION" ]]; then
         wget https://github.com/praekeltfoundation/travis-pyenv/releases/download/0.4.0/setup-pyenv.sh
         source setup-pyenv.sh
