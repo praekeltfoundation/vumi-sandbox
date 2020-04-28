@@ -502,6 +502,42 @@ class JsSandboxTestMixin(object):
             'Exiting sandbox.',
         ])
 
+    @inlineCallbacks
+    def test_js_sandboxer_with_multiple_requests_in_single_process(self):
+        app_js = pkg_resources.resource_filename(
+            'vxsandbox.tests', 'app_log_msg.js')
+        javascript = file(app_js).read()
+        app = yield self.setup_app(javascript, {"messages_per_process": 2})
+
+        with LogCatcher() as lc:
+            status_1 = yield app.process_message_in_sandbox(
+                self.app_helper.make_inbound("foo", sandbox_id='sandbox1'))
+            status_2 = yield app.process_message_in_sandbox(
+                self.app_helper.make_inbound("bar", sandbox_id='sandbox1'))
+            failures = [log['failure'].value for log in lc.errors]
+            msgs = lc.messages()
+        self.assertEqual(failures, [])
+        self.assertEqual(status_1, 0)
+        self.assertEqual(status_2, 0)
+        self.assertEqual(msgs, [
+            # Startup
+            'Starting sandbox ...',
+            # First message
+            'Loading sandboxed code ...',
+            'From init!',
+            'Processing inbound-message: foo',
+            'Log successful: true',
+            'Done.',
+            # Second message
+            'Loading sandboxed code ...',
+            'From init!',
+            'Processing inbound-message: bar',
+            'Log successful: true',
+            'Done.',
+            # Shutdown
+            'Exiting sandbox.',
+        ])
+
 
 class TestJsSandbox(SandboxTestCaseBase, JsSandboxTestMixin):
 

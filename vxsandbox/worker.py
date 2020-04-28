@@ -185,7 +185,8 @@ class SandboxConfig(ApplicationWorker.CONFIG_CLASS):
         " these directly using Twisted logging instead.",
         default=None)
     sandbox_id = ConfigText("This is set based on individual messages.")
-
+    messages_per_process = ConfigInt(
+        "Number of messages to handle per process.", default=1)
 
 class Sandbox(ApplicationWorker):
     """Sandbox application worker."""
@@ -224,10 +225,15 @@ class Sandbox(ApplicationWorker):
         return rlimits
 
     def setup_application(self):
+        self._reset_sandbox_protocol_state()
         return self.resources.setup_resources()
 
     def teardown_application(self):
         return self.resources.teardown_resources()
+
+    def _reset_sandbox_protocol_state(self):
+        self._current_protocol = None
+        self._current_message_count = 0
 
     def setup_connectors(self):
         # Set the default event handler so we can handle events from any
@@ -252,12 +258,19 @@ class Sandbox(ApplicationWorker):
         return rlimits
 
     def create_sandbox_protocol(self, api):
+        # If we have an existing protocol, we reuse it.
+        if self._current_protocol is not None:
+            self._current_protocol.set_api(api)
+            return self._current_protocol
         rlimits = self.get_rlimits(api.config)
         spawn_kwargs = dict(env=api.config.env, path=api.config.path)
         executable, args = self.get_executable_and_args(api.config)
-        return SandboxProtocol(
+        protocol = SandboxProtocol(
             api.config.sandbox_id, api, executable, args, spawn_kwargs,
             rlimits, api.config.timeout, api.config.recv_limit)
+        protocol.spawn()
+        self._current_protocol = protocol
+        return protocol
 
     def create_sandbox_api(self, resources, config):
         return SandboxApi(resources, config)
@@ -282,13 +295,15 @@ class Sandbox(ApplicationWorker):
         return protocol
 
     def _process_in_sandbox(self, sandbox_protocol, api_callback):
-        sandbox_protocol.spawn()
-
-        def on_end(_result):
-            # FIXME: For now, we unconditionally kill the sandbox after every
-            # message.
-            sandbox_protocol.api.sandbox_exit()
-            return sandbox_protocol.done()
+        def on_end(result):
+            self._current_message_count += 1
+            max_messages = sandbox_protocol.api.config.messages_per_process
+            if self._current_message_count >= max_messages:
+                sandbox_protocol.api.sandbox_exit()
+                self._reset_sandbox_protocol_state()
+                return sandbox_protocol.done()
+            else:
+                return result
 
         def on_start(_result):
             sandbox_protocol.api.sandbox_init()
