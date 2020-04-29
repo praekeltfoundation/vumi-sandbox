@@ -225,15 +225,26 @@ class Sandbox(ApplicationWorker):
         return rlimits
 
     def setup_application(self):
-        self._reset_sandbox_protocol_state()
+        self._sandbox_pool = {}
         return self.resources.setup_resources()
 
     def teardown_application(self):
         return self.resources.teardown_resources()
 
-    def _reset_sandbox_protocol_state(self):
-        self._current_protocol = None
-        self._current_message_count = 0
+    def _get_cached_sandbox(self, msg_type):
+        empty_cache = {"protocol": None, "msgs": 0}
+        return self._sandbox_pool.setdefault(msg_type, empty_cache)
+
+    def _update_cached_sandbox_cb(self, result, msg_type):
+        cache = self._sandbox_pool[msg_type]
+        cache["msgs"] += 1
+        protocol = cache["protocol"]
+        if cache["msgs"] >= protocol.api.config.messages_per_process:
+            protocol.api.sandbox_exit()
+            self._sandbox_pool.pop(msg_type)
+            return protocol.done()
+        else:
+            return result
 
     def setup_connectors(self):
         # Set the default event handler so we can handle events from any
@@ -258,10 +269,6 @@ class Sandbox(ApplicationWorker):
         return rlimits
 
     def create_sandbox_protocol(self, api):
-        # If we have an existing protocol, we reuse it.
-        if self._current_protocol is not None:
-            self._current_protocol.set_api(api)
-            return self._current_protocol
         rlimits = self.get_rlimits(api.config)
         spawn_kwargs = dict(env=api.config.env, path=api.config.path)
         executable, args = self.get_executable_and_args(api.config)
@@ -269,7 +276,6 @@ class Sandbox(ApplicationWorker):
             api.config.sandbox_id, api, executable, args, spawn_kwargs,
             rlimits, api.config.timeout, api.config.recv_limit)
         protocol.spawn()
-        self._current_protocol = protocol
         return protocol
 
     def create_sandbox_api(self, resources, config):
@@ -291,25 +297,22 @@ class Sandbox(ApplicationWorker):
         to retrieve a custom protocol if needed.
         """
         api = self.create_sandbox_api(self.resources, config)
-        protocol = self.create_sandbox_protocol(api)
+        # If we have an existing protocol, we reuse it.
+        cache = self._get_cached_sandbox(msg_or_event["message_type"])
+        protocol = cache["protocol"]
+        if protocol is not None:
+            protocol.set_api(api)
+        else:
+            protocol = self.create_sandbox_protocol(api)
+        cache["protocol"] = protocol
         return protocol
 
-    def _process_in_sandbox(self, sandbox_protocol, api_callback):
-        def on_end(result):
-            self._current_message_count += 1
-            max_messages = sandbox_protocol.api.config.messages_per_process
-            if self._current_message_count >= max_messages:
-                sandbox_protocol.api.sandbox_exit()
-                self._reset_sandbox_protocol_state()
-                return sandbox_protocol.done()
-            else:
-                return result
-
+    def _process_in_sandbox(self, sandbox_protocol, api_callback, msg_type):
         def on_start(_result):
             sandbox_protocol.api.sandbox_init()
             api_callback()
             d = sandbox_protocol.api.done
-            d.addCallback(on_end)
+            d.addCallback(self._update_cached_sandbox_cb, msg_type)
             d.addErrback(log.error)
             return d
 
@@ -325,7 +328,9 @@ class Sandbox(ApplicationWorker):
         def sandbox_init():
             sandbox_protocol.api.sandbox_inbound_message(msg)
 
-        status = yield self._process_in_sandbox(sandbox_protocol, sandbox_init)
+        status = yield self._process_in_sandbox(
+            sandbox_protocol, sandbox_init, msg["message_type"],
+        )
         returnValue(status)
 
     @inlineCallbacks
@@ -337,7 +342,9 @@ class Sandbox(ApplicationWorker):
         def sandbox_init():
             sandbox_protocol.api.sandbox_inbound_event(event)
 
-        status = yield self._process_in_sandbox(sandbox_protocol, sandbox_init)
+        status = yield self._process_in_sandbox(
+            sandbox_protocol, sandbox_init, event["message_type"],
+        )
         returnValue(status)
 
     def consume_user_message(self, msg):
