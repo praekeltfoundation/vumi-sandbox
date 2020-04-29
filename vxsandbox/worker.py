@@ -7,7 +7,8 @@ import os
 import pkg_resources
 import logging
 
-from twisted.internet.defer import inlineCallbacks, returnValue, succeed
+from twisted.internet.defer import (
+    Deferred, inlineCallbacks, returnValue, succeed)
 
 from vumi.config import ConfigText, ConfigInt, ConfigList, ConfigDict
 from vumi.application.base import ApplicationWorker
@@ -36,6 +37,9 @@ class JsSandboxResource(SandboxResource):
                                         javascript=javascript,
                                         app_context=app_context))
 
+    def handle_done(self, api, command):
+        api.message_or_event_processed()
+
 
 class SandboxApi(object):
     """A sandbox API instance for a particular sandbox run."""
@@ -60,6 +64,7 @@ class SandboxApi(object):
                 potential_logger = None
         self.logging_resource = potential_logger
         self.config = config
+        self.done = Deferred()
 
     @property
     def sandbox_id(self):
@@ -71,10 +76,20 @@ class SandboxApi(object):
                                "existing id: %r, new id: %r)."
                                % (self.sandbox_id, sandbox.sandbox_id))
         self._sandbox = sandbox
+        self._sandbox_done = sandbox.done()
+        self._sandbox_done.addCallback(self._done_if_not_already_done)
+        self._sandbox_done.addErrback(self.done.errback)
+
+    def _done_if_not_already_done(self, result):
+        if not self.done.called:
+            self.done.callback(result)
 
     def sandbox_init(self):
         for sandbox_resource in self.resources.resources.values():
             sandbox_resource.sandbox_init(self)
+
+    def sandbox_exit(self):
+        self.sandbox_send(SandboxCommand(cmd="exit"))
 
     def sandbox_inbound_message(self, msg):
         self._inbound_messages[msg['message_id']] = msg
@@ -129,6 +144,9 @@ class SandboxApi(object):
             reply['cmd'] = '%s%s%s' % (resource_name, sep, rest)
             self.sandbox_send(reply)
 
+    def message_or_event_processed(self):
+        self.done.callback(0)
+
 
 class SandboxConfig(ApplicationWorker.CONFIG_CLASS):
 
@@ -167,7 +185,8 @@ class SandboxConfig(ApplicationWorker.CONFIG_CLASS):
         " these directly using Twisted logging instead.",
         default=None)
     sandbox_id = ConfigText("This is set based on individual messages.")
-
+    messages_per_process = ConfigInt(
+        "Number of messages to handle per process.", default=1)
 
 class Sandbox(ApplicationWorker):
     """Sandbox application worker."""
@@ -206,10 +225,15 @@ class Sandbox(ApplicationWorker):
         return rlimits
 
     def setup_application(self):
+        self._reset_sandbox_protocol_state()
         return self.resources.setup_resources()
 
     def teardown_application(self):
         return self.resources.teardown_resources()
+
+    def _reset_sandbox_protocol_state(self):
+        self._current_protocol = None
+        self._current_message_count = 0
 
     def setup_connectors(self):
         # Set the default event handler so we can handle events from any
@@ -234,12 +258,19 @@ class Sandbox(ApplicationWorker):
         return rlimits
 
     def create_sandbox_protocol(self, api):
+        # If we have an existing protocol, we reuse it.
+        if self._current_protocol is not None:
+            self._current_protocol.set_api(api)
+            return self._current_protocol
         rlimits = self.get_rlimits(api.config)
         spawn_kwargs = dict(env=api.config.env, path=api.config.path)
         executable, args = self.get_executable_and_args(api.config)
-        return SandboxProtocol(
+        protocol = SandboxProtocol(
             api.config.sandbox_id, api, executable, args, spawn_kwargs,
             rlimits, api.config.timeout, api.config.recv_limit)
+        protocol.spawn()
+        self._current_protocol = protocol
+        return protocol
 
     def create_sandbox_api(self, resources, config):
         return SandboxApi(resources, config)
@@ -264,12 +295,21 @@ class Sandbox(ApplicationWorker):
         return protocol
 
     def _process_in_sandbox(self, sandbox_protocol, api_callback):
-        sandbox_protocol.spawn()
+        def on_end(result):
+            self._current_message_count += 1
+            max_messages = sandbox_protocol.api.config.messages_per_process
+            if self._current_message_count >= max_messages:
+                sandbox_protocol.api.sandbox_exit()
+                self._reset_sandbox_protocol_state()
+                return sandbox_protocol.done()
+            else:
+                return result
 
         def on_start(_result):
             sandbox_protocol.api.sandbox_init()
             api_callback()
-            d = sandbox_protocol.done()
+            d = sandbox_protocol.api.done
+            d.addCallback(on_end)
             d.addErrback(log.error)
             return d
 
@@ -383,8 +423,7 @@ class JsSandbox(Sandbox):
 
     @classmethod
     def find_sandbox_js(cls):
-        return pkg_resources.resource_filename(
-            'vumi.application.sandbox', 'sandboxer.js')
+        return pkg_resources.resource_filename('vxsandbox', 'sandboxer.js')
 
     def get_js_resource(self):
         return JsSandboxResource('js', self, {})

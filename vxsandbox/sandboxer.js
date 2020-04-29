@@ -93,7 +93,11 @@ var SandboxRunner = function (api) {
     });
 
     self.exit = function() {
-        process.exit(0);
+        // Instead of exiting, we send a "done" command and reset our loaded
+        // state to prepare for the next message.
+        var cmd = self.api.populate_command("js.done", {});
+        self.send_command(cmd);
+        self.loaded = false;
     };
 
     self.load_code = function (command) {
@@ -129,6 +133,10 @@ var SandboxRunner = function (api) {
                 continue;
             }
             var msg = JSON.parse(parts[i]);
+            if (msg.cmd == "exit") {
+                self.log("Exiting sandbox.");
+                process.exit(0);
+            }
             if (!self.loaded) {
                 if (msg.cmd == 'initialize') {
                     self.load_code(msg);

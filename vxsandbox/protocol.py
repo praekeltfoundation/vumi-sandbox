@@ -66,7 +66,6 @@ class SandboxProtocol(ProcessProtocol):
     def __init__(self, sandbox_id, api, executable, args, spawn_kwargs,
                  rlimits, timeout, recv_limit):
         self.sandbox_id = sandbox_id
-        self.api = api
         self.executable = executable
         self.args = args
         self.spawn_kwargs = spawn_kwargs
@@ -81,6 +80,10 @@ class SandboxProtocol(ProcessProtocol):
         self.chunk = ''
         self.error_chunk = ''
         self.error_lines = []
+        self.set_api(api)
+
+    def set_api(self, api):
+        self.api = api
         api.set_sandbox(self)
 
     def spawn(self):
