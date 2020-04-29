@@ -6,7 +6,7 @@ from .resources import (
     SandboxResource, LoggingResource, HttpClientResource,
     MetricsResource, OutboundResource, RedisResource)
 
-__version__ = "0.6.2-alpha1"
+__version__ = "0.6.2-alpha2"
 
 __all__ = [
     "Sandbox", "JsSandbox", "JsFileSandbox", "SandboxError", "SandboxResource",
