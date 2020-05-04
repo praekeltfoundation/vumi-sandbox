@@ -15,3 +15,11 @@ api.on_inbound_message = function(command) {
         this.done();
     });
 }
+
+api.on_inbound_event = function(command) {
+    var msg = "Processing inbound-event: " + command.msg.event_type;
+    this.log_info(msg, function (reply) {
+        this.log_info("Log successful: " + reply.success);
+        this.done();
+    });
+}

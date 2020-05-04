@@ -538,6 +538,57 @@ class JsSandboxTestMixin(object):
             'Exiting sandbox.',
         ])
 
+    @inlineCallbacks
+    def test_js_sandboxer_message_and_event_use_separate_sandboxes(self):
+        app_js = pkg_resources.resource_filename(
+            'vxsandbox.tests', 'app_log_msg.js')
+        javascript = file(app_js).read()
+        app = yield self.setup_app(javascript, {"messages_per_process": 2})
+
+        with LogCatcher() as lc:
+            status_1 = yield app.process_message_in_sandbox(
+                self.app_helper.make_inbound("foo", sandbox_id='sandbox1'))
+            status_2 = yield app.process_event_in_sandbox(
+                self.app_helper.make_ack(sandbox_id='sandbox1'))
+            failures = [log['failure'].value for log in lc.errors]
+            msgs = lc.messages()
+
+        self.assertEqual(failures, [])
+        self.assertEqual(status_1, 0)
+        self.assertEqual(status_2, 0)
+
+        assert set(app._sandbox_pool.keys()) == set(["user_message", "event"])
+        ums = app._get_cached_sandbox("user_message")
+        assert ums["protocol"] is not None
+        assert ums["msgs"] == 1
+        es = app._get_cached_sandbox("event")
+        assert es["protocol"] is not None
+        assert es["msgs"] == 1
+        assert ums["protocol"] != es["protocol"]
+
+        self.assertEqual(msgs, [
+            # Message
+            'Starting sandbox ...',
+            'Loading sandboxed code ...',
+            'From init!',
+            'Processing inbound-message: foo',
+            'Log successful: true',
+            'Done.',
+            # Event
+            'Starting sandbox ...',
+            'Loading sandboxed code ...',
+            'From init!',
+            'Processing inbound-event: ack',
+            'Log successful: true',
+            'Done.',
+        ])
+
+        # Cleanup
+        ums["protocol"].api.sandbox_exit()
+        es["protocol"].api.sandbox_exit()
+        yield ums["protocol"].done()
+        yield es["protocol"].done()
+
 
 class TestJsSandbox(SandboxTestCaseBase, JsSandboxTestMixin):
 
