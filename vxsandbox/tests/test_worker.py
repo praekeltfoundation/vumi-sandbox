@@ -583,6 +583,49 @@ class JsSandboxTestMixin(object):
             'Done.',
         ])
 
+    @inlineCallbacks
+    def test_js_sandboxer_cached_sandbox_removed_if_killed(self):
+        app_js = pkg_resources.resource_filename(
+            'vxsandbox.tests', 'app_log_msg.js')
+        javascript = file(app_js).read()
+        app = yield self.setup_app(javascript, {"messages_per_process": 2})
+
+        with LogCatcher() as lc:
+            status_1 = yield app.process_message_in_sandbox(
+                self.app_helper.make_inbound("foo", sandbox_id='sandbox1'))
+
+            sp = app._get_cached_sandbox("user_message")
+            sp["protocol"].kill()
+            yield sp["cleanup_d"].addErrback(lambda _: None)
+            assert app._sandbox_pool == {}
+
+            status_2 = yield app.process_message_in_sandbox(
+                self.app_helper.make_inbound("bar", sandbox_id='sandbox1'))
+
+            failures = [log['failure'].value for log in lc.errors]
+            msgs = lc.messages()
+
+        self.assertEqual(failures, [])
+        self.assertEqual(status_1, 0)
+        self.assertEqual(status_2, 0)
+        self.assertEqual(app._get_cached_sandbox("user_message")["msgs"], 1)
+
+        self.assertEqual(msgs, [
+            'Starting sandbox ...',
+            'Loading sandboxed code ...',
+            'From init!',
+            'Processing inbound-message: foo',
+            'Log successful: true',
+            'Done.',
+            # First sandbox gets killed here
+            'Starting sandbox ...',
+            'Loading sandboxed code ...',
+            'From init!',
+            'Processing inbound-message: bar',
+            'Log successful: true',
+            'Done.',
+        ])
+
 
 class TestJsSandbox(SandboxTestCaseBase, JsSandboxTestMixin):
 

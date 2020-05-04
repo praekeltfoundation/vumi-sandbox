@@ -77,12 +77,15 @@ class SandboxApi(object):
                                % (self.sandbox_id, sandbox.sandbox_id))
         self._sandbox = sandbox
         self._sandbox_done = sandbox.done()
-        self._sandbox_done.addCallback(self._done_if_not_already_done)
-        self._sandbox_done.addErrback(self.done.errback)
+        self._sandbox_done.addCallbacks(self._done_cb, self._done_eb)
 
-    def _done_if_not_already_done(self, result):
+    def _done_cb(self, result):
         if not self.done.called:
             self.done.callback(result)
+
+    def _done_eb(self, result):
+        if not self.done.called:
+            self.done.errback(result)
 
     def sandbox_init(self):
         for sandbox_resource in self.resources.resources.values():
@@ -90,7 +93,6 @@ class SandboxApi(object):
 
     def sandbox_exit(self):
         self.sandbox_send(SandboxCommand(cmd="exit"))
-        return self._sandbox.done()
 
     def sandbox_inbound_message(self, msg):
         self._inbound_messages[msg['message_id']] = msg
@@ -232,8 +234,9 @@ class Sandbox(ApplicationWorker):
     @inlineCallbacks
     def teardown_application(self):
         for sp in self._sandbox_pool.values():
+            sp["protocol"].api.sandbox_exit()
             # Drop (already logged) sandbox errors to avoid breaking teardown.
-            yield sp["protocol"].api.sandbox_exit().addErrback(lambda _: None)
+            yield sp["cleanup_d"].addErrback(lambda _: None)
         yield self.resources.teardown_resources()
 
     def _get_cached_sandbox(self, msg_type):
@@ -245,11 +248,20 @@ class Sandbox(ApplicationWorker):
         cache["msgs"] += 1
         protocol = cache["protocol"]
         if cache["msgs"] >= protocol.api.config.messages_per_process:
-            d = protocol.api.sandbox_exit()
-            self._sandbox_pool.pop(msg_type)
-            return d
+            protocol.api.sandbox_exit()
+            return cache["cleanup_d"]
         else:
             return result
+
+    def _clear_cached_sandbox_cb(self, result, msg_type, protocol):
+        if msg_type not in self._sandbox_pool:
+            # We've already been cleared.
+            return result
+        if self._sandbox_pool[msg_type]["protocol"] is not protocol:
+            # We've already been replaced.
+            return result
+        self._sandbox_pool.pop(msg_type)
+        return result
 
     def setup_connectors(self):
         # Set the default event handler so we can handle events from any
@@ -302,15 +314,18 @@ class Sandbox(ApplicationWorker):
         to retrieve a custom protocol if needed.
         """
         api = self.create_sandbox_api(self.resources, config)
+        msg_type = msg_or_event["message_type"]
         # If we have an existing protocol, we reuse it.
-        cache = self._get_cached_sandbox(msg_or_event["message_type"])
-        protocol = cache["protocol"]
-        if protocol is not None:
-            protocol.set_api(api)
+        cache = self._get_cached_sandbox(msg_type)
+        if cache["protocol"] is not None:
+            cache["protocol"].set_api(api)
         else:
             protocol = self.create_sandbox_protocol(api)
-        cache["protocol"] = protocol
-        return protocol
+            cache["protocol"] = protocol
+            d = protocol.done()
+            d.addBoth(self._clear_cached_sandbox_cb, msg_type, protocol)
+            cache["cleanup_d"] = d
+        return cache["protocol"]
 
     def _process_in_sandbox(self, sandbox_protocol, api_callback, msg_type):
         def on_start(_result):
