@@ -583,12 +583,6 @@ class JsSandboxTestMixin(object):
             'Done.',
         ])
 
-        # Cleanup
-        ums["protocol"].api.sandbox_exit()
-        es["protocol"].api.sandbox_exit()
-        yield ums["protocol"].done()
-        yield es["protocol"].done()
-
 
 class TestJsSandbox(SandboxTestCaseBase, JsSandboxTestMixin):
 

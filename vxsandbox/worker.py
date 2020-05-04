@@ -90,6 +90,7 @@ class SandboxApi(object):
 
     def sandbox_exit(self):
         self.sandbox_send(SandboxCommand(cmd="exit"))
+        return self._sandbox.done()
 
     def sandbox_inbound_message(self, msg):
         self._inbound_messages[msg['message_id']] = msg
@@ -228,8 +229,12 @@ class Sandbox(ApplicationWorker):
         self._sandbox_pool = {}
         return self.resources.setup_resources()
 
+    @inlineCallbacks
     def teardown_application(self):
-        return self.resources.teardown_resources()
+        for sp in self._sandbox_pool.values():
+            # Drop (already logged) sandbox errors to avoid breaking teardown.
+            yield sp["protocol"].api.sandbox_exit().addErrback(lambda _: None)
+        yield self.resources.teardown_resources()
 
     def _get_cached_sandbox(self, msg_type):
         empty_cache = {"protocol": None, "msgs": 0}
@@ -240,9 +245,9 @@ class Sandbox(ApplicationWorker):
         cache["msgs"] += 1
         protocol = cache["protocol"]
         if cache["msgs"] >= protocol.api.config.messages_per_process:
-            protocol.api.sandbox_exit()
+            d = protocol.api.sandbox_exit()
             self._sandbox_pool.pop(msg_type)
-            return protocol.done()
+            return d
         else:
             return result
 
