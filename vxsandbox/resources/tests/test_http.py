@@ -53,7 +53,7 @@ class DummyHTTPClient(object):
     def succeed_next(self, body, code=200, headers={}):
 
         default_headers = {
-            'Content-Length': len(body),
+            'Content-Length': str(len(body)),
         }
         default_headers.update(headers)
 
@@ -356,7 +356,7 @@ class TestHttpClientResource(ResourceTestCaseBase):
     @inlineCallbacks
     def test_data_limit_exceeded_using_head_method(self):
         self.http_request_succeed('', headers={
-            'Content-Length': self.resource.DEFAULT_DATA_LIMIT + 1,
+            'Content-Length': str(self.resource.DEFAULT_DATA_LIMIT + 1),
         })
         reply = yield self.dispatch_command(
             'head', url='https://www.example.com',)
@@ -367,7 +367,7 @@ class TestHttpClientResource(ResourceTestCaseBase):
     @inlineCallbacks
     def test_data_limit_exceeded_using_header(self):
         self.http_request_succeed('', headers={
-            'Content-Length': self.resource.DEFAULT_DATA_LIMIT + 1,
+            'Content-Length': str(self.resource.DEFAULT_DATA_LIMIT + 1),
         })
         reply = yield self.dispatch_command(
             'get', url='https://www.example.com',)
