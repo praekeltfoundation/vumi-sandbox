@@ -1,11 +1,12 @@
 import json
 import logging
 
-from twisted.internet.defer import inlineCallbacks
+from twisted.internet.defer import inlineCallbacks, Deferred
 
 from vumi.tests.helpers import PersistenceHelper
+from vumi.tests.utils import VumiTestCase
 
-from vxsandbox.resources.kv import RedisResource
+from vxsandbox.resources.kv import RedisResource, Reconciler
 from vxsandbox.resources.tests.utils import ResourceTestCaseBase
 
 
@@ -202,3 +203,39 @@ class TestRedisResource(ResourceTestCaseBase):
             message,
             'Redis hard limit of 100 keys reached for sandbox test_id. '
             'No more keys can be written.')
+
+
+class TestReconciler(VumiTestCase):
+    @inlineCallbacks
+    def setUp(self):
+        super(TestReconciler, self).setUp()
+        self.persistence_helper = self.add_helper(PersistenceHelper())
+        self.r_server = yield self.persistence_helper.get_redis_manager()
+
+    def mk_reconciler(self, **kw):
+        reconciler = Reconciler(self.r_server, **kw)
+        self.addCleanup(reconciler.stop)
+        return reconciler
+
+    def test_start(self):
+        reconciler = self.mk_reconciler()
+        self.assertEqual(reconciler._task.running, False)
+        self.assertEqual(reconciler._done, None)
+        reconciler.start()
+        self.assertEqual(reconciler._task.running, True)
+        self.assertTrue(isinstance(reconciler._done, Deferred))
+
+    @inlineCallbacks
+    def test_stop(self):
+        reconciler = self.mk_reconciler()
+        reconciler.start()
+        self.assertEqual(reconciler._task.running, True)
+        self.assertTrue(isinstance(reconciler._done, Deferred))
+        yield reconciler.stop()
+        self.assertEqual(reconciler._task.running, False)
+        self.assertEqual(reconciler._done, None)
+
+    @inlineCallbacks
+    def test_attempt_reconciliation_no_previous_recon(self):
+        reconciler = self.mk_reconciler()
+        yield reconciler.attempt_reconciliation()
