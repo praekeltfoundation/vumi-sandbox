@@ -28,6 +28,8 @@ jobs:
       - name: install deps
         run: |
           pip install wheel
+          # We need the backport of the typing module to build Twisted.
+          RUN pip install typing==3.10.0.0
           pip install -e .
       - name: run tests
         env:
