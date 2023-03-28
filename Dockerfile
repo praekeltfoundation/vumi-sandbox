@@ -27,6 +27,6 @@ ENV NODEJS_VERSION "12.22.12"
 RUN apt-get-install.sh nodejs=${NODEJS_VERSION}*
 
 COPY --from=builder /wheels /wheels
-RUN pip install -f /wheels -r /requirements.txt
+RUN pip install -f /wheels vxsandbox
 
 ENV WORKER_CLASS "vxsandbox.worker.StandaloneJsFileSandbox"
