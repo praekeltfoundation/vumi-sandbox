@@ -1,12 +1,18 @@
-FROM ghcr.io/praekeltfoundation/vumi-base:no-wheelhouse AS builder
+FROM ghcr.io/praekeltfoundation/pypy-base-nw:2-buster AS builder
 
-COPY . /app
+RUN apt-get update
+RUN apt-get -yy install build-essential libssl-dev libffi-dev
+
+COPY . ./
 
 RUN pip install --upgrade pip
-RUN pip wheel -w /wheels -r requirements.txt
+# We need the backport of the typing module to build Twisted.
+RUN pip install typing==3.10.0.0
+
+RUN pip wheel -w /wheels -r /requirements.txt
 
 
-FROM ghcr.io/praekeltfoundation/vumi-base:no-wheelhouse
+FROM ghcr.io/praekeltfoundation/pypy-base-nw:2-buster
 MAINTAINER Praekelt Foundation <dev@praekeltfoundation.org>
 
 # Install nodejs 12.x LTS release
