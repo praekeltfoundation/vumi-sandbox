@@ -9,7 +9,7 @@ RUN apt-get-install.sh apt-transport-https curl gnupg2 && \
         > /etc/apt/sources.list.d/nodesource.list && \
     apt-get-purge.sh curl gnupg2
 
-ENV NODEJS_VERSION "12.16.3"
+ENV NODEJS_VERSION "12.22.12"
 RUN apt-get-install.sh nodejs=${NODEJS_VERSION}*
 
 ENV VXSANDBOX_VERSION "0.6.2a3"
