@@ -13,6 +13,7 @@ setup(
     include_package_data=True,
     install_requires=[
         'automat<22.10.0',  # Twisted dep, newer versions don't work with ancient Python.
+        'pyOpenSSL<21',  # Maybe?
         'Twisted>=20.3.0,<21.0.0',
         'vumi>=0.6.19',
     ],
