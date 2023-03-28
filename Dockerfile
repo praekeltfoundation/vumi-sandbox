@@ -1,7 +1,6 @@
 FROM ghcr.io/praekeltfoundation/vumi-base:no-wheelhouse AS builder
 
-COPY . /build
-WORKDIR /build
+COPY . /app
 
 RUN pip install --upgrade pip
 RUN pip wheel -w /wheels -r requirements.txt
