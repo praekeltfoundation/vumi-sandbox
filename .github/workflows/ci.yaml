@@ -10,23 +10,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['2.x']
-        nodejs-version: ['4', '6', '8']
-        include:
-          - python-version: 'pypy2'
-            nodejs-version: '8'
+        nodejs-version: ['12']
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: pypy-2.7
       - name: setup redis
         uses: shogo82148/actions-setup-redis@v1
         with:
           redis-version: '6.x'
       - name: setup nodejs
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.nodejs-version }}
       - name: install deps
