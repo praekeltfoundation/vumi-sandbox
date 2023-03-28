@@ -5,7 +5,7 @@ MAINTAINER Praekelt Foundation <dev@praekeltfoundation.org>
 RUN apt-get-install.sh apt-transport-https curl gnupg2 && \
     curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key \
         | apt-key add - && \
-    echo "deb https://deb.nodesource.com/node_12.x jessie main" \
+    echo "deb https://deb.nodesource.com/node_12.x buster main" \
         > /etc/apt/sources.list.d/nodesource.list && \
     apt-get-purge.sh curl gnupg2
 
