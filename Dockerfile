@@ -24,7 +24,7 @@ ARG NODEJS_VERSION="18.15.0"
 RUN apt-get-install.sh apt-transport-https curl gnupg2 && \
     curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key \
         | apt-key add - && \
-    echo "deb https://deb.nodesource.com/node_${NODEJS_major}.x buster main" \
+    echo "deb https://deb.nodesource.com/node_${NODEJS_MAJOR}.x buster main" \
         > /etc/apt/sources.list.d/nodesource.list && \
     apt-get-purge.sh curl gnupg2
 
