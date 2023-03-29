@@ -10,6 +10,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Extracting the major version from the full version is rather trickier
+        # than one might imagine, so we specify both.
+        include:
+          - nodejs_major: '18'
+            nodejs_full: '18.15.0'
+          - nodejs_major: '12'
+            nodejs_full: '12.22.12'
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -22,9 +32,8 @@ jobs:
           images: |
             ghcr.io/${{ github.repository }}
           tags: |
-            type=ref,event=branch
-            type=semver,pattern={{version}}
-            type=sha
+            type=semver,pattern=node${{ matrix.nodejs_major }}-{{raw}}
+            type=sha,prefix=node${{ matrix.nodejs_major }}-{{branch}}-
       - name: login to ghcr
         uses: docker/login-action@v2
         with:
@@ -37,3 +46,6 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            NODEJS_MAJOR=${{ matrix.nodejs_major }}
+            NODEJS_VERSION=${{ matrix.nodejs_full }}
