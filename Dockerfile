@@ -13,7 +13,7 @@ RUN pip wheel -w /wheels -r /requirements.txt
 
 
 # TODO: Switch to a versioned vumi image once we have one.
-FROM ghcr.io/praekeltfoundation/vumi-base:sha-b99680b
+FROM ghcr.io/praekeltfoundation/vumi-base:no-wheelhouse-48b1928
 MAINTAINER Praekelt Foundation <dev@praekeltfoundation.org>
 
 # We need both of these outside the build, so we may as well pass them both in
