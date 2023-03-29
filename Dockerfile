@@ -12,7 +12,8 @@ RUN pip install typing==3.10.0.0
 RUN pip wheel -w /wheels -r /requirements.txt
 
 
-FROM ghcr.io/praekeltfoundation/pypy-base-nw:2-buster
+# TODO: Switch to a versioned vumi image once we have one.
+FROM ghcr.io/praekeltfoundation/vumi-base:sha-b99680b
 MAINTAINER Praekelt Foundation <dev@praekeltfoundation.org>
 
 # We need both of these outside the build, so we may as well pass them both in
