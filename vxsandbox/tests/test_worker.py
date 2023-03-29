@@ -392,6 +392,8 @@ class JsSandboxTestMixin(object):
         "RLIMIT_DATA": [-1, -1],
         "RLIMIT_STACK": [-1, -1],
         "RLIMIT_AS": [-1, -1],
+        "RLIMIT_CPU": [-1, -1],
+        "RLIMIT_NOFILE": [-1, -1],
     }
 
     @inlineCallbacks
