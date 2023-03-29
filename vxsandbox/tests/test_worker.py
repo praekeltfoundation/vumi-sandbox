@@ -386,9 +386,12 @@ class TestSandbox(SandboxTestCaseBase):
 
 class JsSandboxTestMixin(object):
 
+    # We don't know what the actual limits are, and since we now control CPU
+    # and memory externally having limits here is less important.
     BIGGER_RLIMITS = {
-        "RLIMIT_STACK": [2 * 1024 * 1024] * 2,
-        "RLIMIT_AS": [786 * 1024 * 1024] * 2,
+        "RLIMIT_DATA": [-1, -1],
+        "RLIMIT_STACK": [-1, -1],
+        "RLIMIT_AS": [-1, -1],
     }
 
     @inlineCallbacks

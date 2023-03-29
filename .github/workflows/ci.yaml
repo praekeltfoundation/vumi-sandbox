@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        nodejs-version: ['18']
+        nodejs-version: ['12', '18']
     steps:
       - uses: actions/checkout@v3
       - name: setup python
