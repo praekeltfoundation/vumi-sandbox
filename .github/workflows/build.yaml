@@ -33,7 +33,7 @@ jobs:
             ghcr.io/${{ github.repository }}
           tags: |
             type=semver,pattern=node${{ matrix.nodejs_major }}-{{raw}}
-            type=sha,prefix=node${{ matrix.nodejs_major }}-{{branch}}-
+            type=sha,prefix=node${{ matrix.nodejs_major }}-{{branch}}-,enable=${{ github.ref_type != 'tag' }}
       - name: login to ghcr
         uses: docker/login-action@v2
         with:

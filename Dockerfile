@@ -12,8 +12,7 @@ RUN pip install typing==3.10.0.0
 RUN pip wheel -w /wheels -r /requirements.txt
 
 
-# TODO: Switch to a versioned vumi image once we have one.
-FROM ghcr.io/praekeltfoundation/vumi-base:no-wheelhouse-48b1928
+FROM ghcr.io/praekeltfoundation/vumi-base:0.1.1
 MAINTAINER Praekelt Foundation <dev@praekeltfoundation.org>
 
 # We need both of these outside the build, so we may as well pass them both in
