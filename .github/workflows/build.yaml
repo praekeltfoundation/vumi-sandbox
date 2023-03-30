@@ -13,18 +13,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Extracting the major version from the full version is rather trickier
-        # than one might imagine, so we specify both.
-        include:
-          - nodejs_major: '18'
-            nodejs_full: '18.15.0'
-          - nodejs_major: '12'
-            nodejs_full: '12.22.12'
+        # NOTE: Only one entry per major version.
+        nodejs_version: ['18.15.0', '12.22.12']
     steps:
       - name: checkout
         uses: actions/checkout@v3
       - name: set up buildx
         uses: docker/setup-buildx-action@v2
+      - name: extract nodejs major version
+        id: nodemajver
+        run: |
+          echo ${{ github.matrix.nodejs_version }} | cut -d. -f1 | sed 's/^/nodemajver=/' >> "$GITHUB_OUTPUT"
       - name: extract image version from tag
         id: imagever
         if: ${{ github.ref_type == 'tag' }}
@@ -37,8 +36,8 @@ jobs:
           images: |
             ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern=node${{ matrix.nodejs_major }}-{{raw}},value=${{ steps.imagever.outputs.imagever }}
-            type=sha,prefix=node${{ matrix.nodejs_major }}-{{branch}}-,enable=${{ github.ref_type != 'tag' }}
+            type=semver,pattern=node${{ steps.nodemajver.outputs.nodemajver }}-{{raw}},value=${{ steps.imagever.outputs.imagever }}
+            type=sha,prefix=node${{ steps.nodemajver.outputs.nodemajver }}-{{branch}}-,enable=${{ github.ref_type != 'tag' }}
       - name: login to ghcr
         uses: docker/login-action@v2
         with:
@@ -53,4 +52,4 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             NODEJS_MAJOR=${{ matrix.nodejs_major }}
-            NODEJS_VERSION=${{ matrix.nodejs_full }}
+            NODEJS_VERSION=${{ matrix.nodejs_version }}
