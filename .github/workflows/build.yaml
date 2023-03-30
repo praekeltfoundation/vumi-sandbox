@@ -23,7 +23,7 @@ jobs:
       - name: extract nodejs major version
         id: nodemajver
         run: |
-          echo ${{ github.matrix.nodejs_version }} | cut -d. -f1 | sed 's/^/nodemajver=/' >> "$GITHUB_OUTPUT"
+          echo ${{ matrix.nodejs_version }} | cut -d. -f1 | sed 's/^/nodemajver=/' >> "$GITHUB_OUTPUT"
       - name: extract image version from tag
         id: imagever
         if: ${{ github.ref_type == 'tag' }}
@@ -51,5 +51,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
-            NODEJS_MAJOR=${{ matrix.nodejs_major }}
+            NODEJS_MAJOR=${{ steps.nodemajver.outputs.nodemajver }}
             NODEJS_VERSION=${{ matrix.nodejs_version }}
