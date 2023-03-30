@@ -27,6 +27,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
       - name: extract image version from tag
         id: imagever
+        if: ${{ github.ref_type == 'tag' }}
         run: |
           echo ${{ github.ref_name }} | sed 's/^image-/imagever=/' >> "$GITHUB_OUTPUT"
       - name: construct image metadata
