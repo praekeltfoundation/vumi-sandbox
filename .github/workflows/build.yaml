@@ -1,0 +1,55 @@
+name: Build and push images
+
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - 'image-v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # NOTE: Only one entry per major version.
+        nodejs_version: ['18.15.0', '12.22.12']
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: set up buildx
+        uses: docker/setup-buildx-action@v2
+      - name: extract nodejs major version
+        id: nodemajver
+        run: |
+          echo ${{ matrix.nodejs_version }} | cut -d. -f1 | sed 's/^/nodemajver=/' >> "$GITHUB_OUTPUT"
+      - name: extract image version from tag
+        id: imagever
+        if: ${{ github.ref_type == 'tag' }}
+        run: |
+          echo ${{ github.ref_name }} | sed 's/^image-/imagever=/' >> "$GITHUB_OUTPUT"
+      - name: construct image metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern=node${{ steps.nodemajver.outputs.nodemajver }}-{{raw}},value=${{ steps.imagever.outputs.imagever }}
+            type=sha,prefix=node${{ steps.nodemajver.outputs.nodemajver }}-{{branch}}-,enable=${{ github.ref_type != 'tag' }}
+      - name: login to ghcr
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            NODEJS_MAJOR=${{ steps.nodemajver.outputs.nodemajver }}
+            NODEJS_VERSION=${{ matrix.nodejs_version }}
