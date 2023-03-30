@@ -20,7 +20,7 @@ MAINTAINER Praekelt Foundation <dev@praekeltfoundation.org>
 ARG NODEJS_MAJOR="18"
 ARG NODEJS_VERSION="18.15.0"
 
-# Install nodejs from upstream apt repo
+# Install nodejs from upstream apt repo.
 RUN apt-get-install.sh apt-transport-https curl gnupg2 && \
     curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key \
         | apt-key add - && \
